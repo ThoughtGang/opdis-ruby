@@ -1,0 +1,4 @@
+Gem for GNU Binutils BFD library.
+
+Note: this is not a complete implementation of the BFD API; it is only
+intended for use with the Opcodes or Opdis gems.

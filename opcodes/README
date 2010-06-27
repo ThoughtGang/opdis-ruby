@@ -1,0 +1,5 @@
+Gem for the GNU Binutils libopcodes library.
+
+NOTE: the libopcodes implementation does not allow one to determine the
+supported platforms at compile time (unless building from within the
+binutils source tree). For now, the x86 and x86-64 targets are hard-coded.
