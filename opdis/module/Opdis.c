@@ -28,7 +28,7 @@ static VALUE str_to_sym( const char * str ) {
 	return rb_funcall(var, rb_intern("to_sym"), 0);
 }
 
-/* BFD Support (require BFD gem) */
+/* BFD Support (requires BFD gem) */
 static VALUE clsBfd = Qnil;
 static VALUE clsBfdSec = Qnil;
 static VALUE clsBfdSym = Qnil;
@@ -699,18 +699,33 @@ static VALUE clsHandler;
 #define HANDLER_METHOD "visited?"
 
 static VALUE cls_handler_visited( VALUE instance, VALUE insn ) {
-	// TODO
-	// return t or f if insn has been visited
+	opdis_insn_t *i;
+	int rv;
+	opdist_t opdis;
+	Data_Get_Struct(instance, opdis_t, opdis);
+	// TODO: insn_to_c
+	rv = opdis_default_handler(i, opdis);
+	return rv ? Qtrue : Qfalse;
+}
+
+/* NOTE: this uses its own opdis_t with a visited_addr tree */
+static VALUE cls_handler_new( VALUE class ) {
+	VALUE argv[1] = {Qnil};
+	opdist_t opdis = opdis_init();
+	instance = Data_Wrap_Struct(class, NULL, opdis_term, opdis);
+	rb_obj_call_init(instance, 0, argv);
+
+	opdis->visited_addr = opdis_vma_tree_init();
+
+	return init;
 }
 
 static void init_handler_class( VALUE modOpdis ) {
+
 	clsHandler = rb_define_class_under(modOpdis, "VisitedAddressTracker", 
 					   rb_cObject);
-	// TODO
-	//rb_define_singleton_method(clsDisasm, "new", cls_disasm_new, 1);
-	//rb_define_singleton_method(clsDisasm, "new", cls_disasm_new, 1);
-	/* setters */
-	//rb_define_method(clsDisasm, DIS_ATTR_, cls_disasm_, 1);
+	rb_define_singleton_method(clsHandler, "new", cls_handler_new, 0);
+	rb_define_method(clsHandler, HANDLER_METHOD, cls_handler_visited, 1);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -721,16 +736,16 @@ static VALUE clsResolver;
 #define RESOLVER_METHOD "resolve"
 
 static VALUE cls_resolver_resolve( VALUE instance, VALUE insn ) {
-	// TODO
-	// return vma for insn operand
+	opdis_insn_t * i;
+	int rv;
+	// TODO : insn to c
+	rv = opdis_default_resolver( i, NULL );
+	return INT2NUM(rv);
 }
 
 static void init_resolver_class( VALUE modOpdis ) {
 	cls = rb_define_class_under(modOpdis, "AddressResolver", rb_cObject);
-	// TODO
-	//rb_define_singleton_method(clsDisasm, "new", cls_disasm_new, 1);
-	/* setters */
-	//rb_define_method(clsDisasm, DIS_ATTR_, cls_disasm_, 1);
+	rb_define_method(clsResolver, RESOLVER_METHOD, cls_resolver_resolve, 1);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -739,24 +754,29 @@ static void init_resolver_class( VALUE modOpdis ) {
 static VALUE clsOutput;
 
 #define OUT_ATTR_ERRORS "errors"
+#define OUT_METHOD_CONTAIN "containing"
 
+/* insn containing vma */
 static VALUE cls_output_contain( VALUE instance, VALUE vma ) {
 	// TODO
 	// return insn containing vma
 }
 
 static VALUE cls_output_new( VALUE class ) {
-	// TODO
-	// attr ro errors = []
+	VALUE instance = rb_class_new(clsOutput);
+	rb_iv_set(instance, IVAR(OUT_ATTR_ERRORS), rb_arry_new() );
+	return instance;
 }
 
 static void init_output_class( VALUE modOpdis ) {
 	clsOutput = rb_define_class_under(modOpdis, "Disassembly", rb_cHash);
-	// TODO
-	// attr rw errors
-	//rb_define_singleton_method(clsDisasm, "new", cls_disasm_new, 1);
+	rb_define_singleton_method(clsOutput, "new", cls_output_new, 0);
+
+	/* read-only attribute for error list */
+	rb_define_attr(clsOutput, OUT_ATTR_ERRORS, 1, 0);
+
 	/* setters */
-	//rb_define_method(clsDisasm, DIS_ATTR_, cls_disasm_, 1);
+	rb_define_method(clsOutput, OUT_METHOD_CONTAIN, cls_output_contain, 1);
 }
 
 
@@ -782,8 +802,6 @@ static struct arch_def arch_definitions[] = {
 	{"x86_64_intel", bfd_arch_i386, bfd_mach_x86_64_intel_syntax, 
 			         print_insn_i386}
 };
-
-
 
 
 /* ---------------------------------------------------------------------- */
@@ -847,6 +865,17 @@ static VALUE clsDisasm;
 
 #define DIS_CONST_ARCHES "architectures"
 
+#define DIS_SYNTAX_ATT "att"
+#define DIS_SYNTAX_INTEL "intel"
+
+#define DIS_CONST_SYNTAXES "syntaxes"
+
+static VALUE cls_disasm_syntaxes( VALUE class ) {
+	VALUE ary = rb_ary_new();
+	rb_ary_push( ary, rb_str_new_cstr(DIS_SYNTAX_ATT) );
+	rb_ary_push( ary, rb_str_new_cstr(DIS_SYNTAX_INTEL) );
+	return ary;
+}
 
 static VALUE cls_disasm_architectures( VALUE class ) {
 	VALUE ary = rb_ary_new();
@@ -963,6 +992,12 @@ static VALUE cls_disasm_set_resolver(VALUE instance, VALUE obj) {
 	return Qtrue;
 }
 
+static VALUE cls_disasm_get_debug(VALUE instance) {
+	opdist_t  opdis;
+	Data_Get_Struct(instance, opdis_t, opdis);
+	return opdis->debug ? Qtrue : Qfalse;
+}
+
 static VALUE cls_disasm_set_debug(VALUE instance, VALUE enabled) {
 	opdist_t  opdis;
 	Data_Get_Struct(instance, opdis_t, opdis);
@@ -970,12 +1005,56 @@ static VALUE cls_disasm_set_debug(VALUE instance, VALUE enabled) {
 	return Qtrue;
 }
 
+static VALUE cls_disasm_get_syntax(VALUE instance) {
+	opdist_t  opdis;
+	VALUE str;
+
+	Data_Get_Struct(instance, opdis_t, opdis);
+
+	if ( opdis->disassembler == print_insn_i386_intel ) {
+		str = rb_str_new_cstr(DIS_SYNTAX_INTEL);
+	} else {
+		str = rb_str_new_cstr(DIS_SYNTAX_ATT);
+	}
+
+	return str;
+}
+
 static VALUE cls_disasm_set_syntax(VALUE instance, VALUE syntax) {
 	opdist_t  opdis;
+	enum opdis_x86_syntax_t syn;
+	const char * str = StringValueCStr(rb_any_to_s(syntax));
+
+	if (! strcmp(syntax, DIS_SYNTAX_INTEL) ) {
+		syn = opdis_x86_syntax_intel;
+	} else if (! strcmp(syntax, DIS_SYNTAX_ATT) ) {
+		syn = opdis_x86_syntax_att;
+	} else {
+		rb_raise(rb_eArgError, "Syntax must be 'intel' or 'att'");
+	}
+
 	Data_Get_Struct(instance, opdis_t, opdis);
-	// TODO
-// set x86syntax
+	opdis_set_x86_syntax(opdis, syn);
+
 	return Qtrue;
+}
+
+static VALUE cls_disasm_get_arch(VALUE instance) {
+	opdist_t  opdis;
+	int i;
+	VALUE str;
+
+	Data_Get_Struct(instance, opdis_t, opdis);
+
+	for ( i = 0; i < num_defs; i++ ) {
+		struct disasm_def *def = &disasm_definitions[i];
+		if ( def->arch == opdis->config.arch &&
+		     def->mach == opdis->config.mach ) {
+			return rb_str_new_cstr(def->name);
+		}
+	}
+
+	return rb_str_new_cstr("unknown");
 }
 
 static VALUE cls_disasm_set_arch(VALUE instance, VALUE arch) {
@@ -1004,6 +1083,12 @@ static VALUE cls_disasm_set_arch(VALUE instance, VALUE arch) {
 	}
 
 	return Qfalse;
+}
+
+static VALUE cls_disasm_set_opts(VALUE instance) {
+	opdist_t  opdis;
+	Data_Get_Struct(instance, opdis_t, opdis);
+	return rb_str_new_cstr(opdis->config.disassembler_options);
 }
 
 static VALUE cls_disasm_set_opts(VALUE instance, VALUE opts) {
@@ -1097,7 +1182,7 @@ static opdis_buf_t opdis_buf_for_target( VALUE tgt, VALUE hash ) {
 	} else if ( Qtrue == rb_obj_is_kind_of( tgt, rb_cIO ) ) {
 		// read file to buf
 	} else {
-		// raise
+		rb_raise(rb_eArgError, "Buffer must be a String, IO or Array");
 	}
 
 	/* apply target-specific args (vma, etc) */
@@ -1236,6 +1321,7 @@ static VALUE cls_disasm_new(VALUE class, VALUE hash) {
 
 	instance = Data_Wrap_Struct(class, NULL, opdis_term, opdis);
 	rb_obj_call_init(instance, 0, argv);
+	//TODO: is this viable?
 	//rb_obj_call_init(instance, 0, &Qnil);
 
 	cls_disasm_handle_args(instance, hash);
@@ -1272,6 +1358,8 @@ static void define_disasm_constants() {
 				   cls_disasm_strategies, 0);
 	rb_define_singleton_method(clsDisasm, DIS_CONST_ARCHES, 
 				   cls_disasm_architectures, 0);
+	rb_define_singleton_method(clsDisasm, DIS_CONST_SYNTAXES, 
+				   cls_disasm_syntaxes, 0);
 }
 
 static void init_disasm_class( VALUE modOpdis ) {
@@ -1298,6 +1386,8 @@ static void init_disasm_class( VALUE modOpdis ) {
 			 cls_disasm_set_arch, 1);
 	rb_define_method(clsDisasm, SETTER(DIS_ATTR_OPTS), 
 			 cls_disasm_set_opts, 1);
+
+	/* getters */
 	rb_define_method(clsDisasm, DIS_ATTR_DEBUG, cls_disasm_get_debug, 0);
 	rb_define_method(clsDisasm, DIS_ATTR_SYNTAX, cls_disasm_get_syntax, 0);
 	rb_define_method(clsDisasm, DIS_ATTR_ARCH, cls_disasm_get_arch, 0);
