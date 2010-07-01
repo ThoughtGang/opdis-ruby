@@ -1179,19 +1179,31 @@ static void config_buf_from_args( opdis_buf_t * buf, VALUE hash ) {
 }
 
 static opdis_buf_t opdis_buf_for_target( VALUE tgt, VALUE hash ) {
-	char * buf = NULL;
+	unsigned char * buf = NULL;
 	unsigned int buf_len = 0;
 	opdis_buf_t obuf;
 
 	if ( Qtrue == rb_obj_is_kind_of( tgt, rb_cString ) ) {
-		buf = RSTRING_PTR(tgt);
+		buf = (unsigned char*) RSTRING_PTR(tgt);
 		buf_len = RSTRING_LEN(tgt);
+
 	} else if ( Qtrue == rb_obj_is_kind_of( tgt, rb_cArray ) ) {
-		buf = RARRAY_PTR(tgt);
+		int i;
+		unsigned char * sbuf;
 		buf_len = RARRAY_LEN(tgt);
+		sbuf = alloca(buf_len);
+		for( i=0; i < buf_len; i++ ) {
+			VALUE val = rb_ary_entry( tgt, i );
+			sbuf[i] = (unsigned char *) NUM2UINT(val);
+		}
+
+		buf = sbuf;
+
 	} else if ( Qtrue == rb_obj_is_kind_of( tgt, rb_cIO ) ) {
-		// TODO: read file to buf
-		rb_raise(rb_eNotImpError, "IO support Not implented" );
+		VALUE str = rb_funcall( tgt, rb_intern("read"), 0 );
+		buf = (unsigned char*) RSTRING_PTR(str);
+		buf_len = RSTRING_LEN(str);
+
 	} else {
 		rb_raise(rb_eArgError, "Buffer must be a String, IO or Array");
 	}
