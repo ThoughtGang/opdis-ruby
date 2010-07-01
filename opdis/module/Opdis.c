@@ -656,38 +656,43 @@ static int invoke_builtin_decoder( OPDIS_DECODER fn, VALUE insn, VALUE hash ) {
 }
 
 static VALUE cls_decoder_decode( VALUE instance, VALUE insn, VALUE hash ) {
-	// TODO
-	// invoke default decoder
-	// return decoded insn
+	invoke_builtin_decoder(opdis_default_decoder, insn, hash);
+	return insn;
 }
 
 static void init_decoder_class( VALUE modOpdis ) {
 	clsDecoder = rb_define_class_under(modOpdis, "InstructionDecoder", 
 					   rb_cObject);
-	// TODO
-	//rb_define_singleton_method(clsDisasm, "new", cls_disasm_new, 1);
-	/* setters */
-	//rb_define_method(clsDisasm, DIS_ATTR_, cls_disasm_, 1);
+	rb_define_method(clsDecoder, DECODER_METHOD, cls_decoder_decode, 2);
 }
 
 /*      ----------------------------------------------------------------- */
 /* 	X86 Decoder Class */
 
-static VALUE clsX86Decoder;
+static VALUE clsX86Decoder, clsX86IntelDecoder;
 
 static VALUE cls_x86decoder_decode( VALUE instance, VALUE insn, VALUE hash ) {
-	// TODO
-	// invoke default x86 decoder
-	// return decoded insn
+	invoke_builtin_decoder(opdis_x86_att_decoder, insn, hash);
+	return insn;
+}
+
+static VALUE cls_x86inteldecoder_decode(VALUE instance, VALUE insn, VALUE hash){
+	invoke_builtin_decoder(opdis_x86_intel_decoder, insn, hash);
+	return insn;
 }
 
 static void init_x86decoder_class( VALUE modOpdis ) {
+	/* AT&T Decoder */
 	clsX86Decoder = rb_define_class_under(modOpdis, "X86Decoder", 
 					      clsDecoder);
-	// TODO
-	//rb_define_singleton_method(clsDisasm, "new", cls_disasm_new, 1);
-	/* setters */
-	//rb_define_method(clsDisasm, DIS_ATTR_, cls_disasm_, 1);
+	rb_define_method(clsX86Decoder, DECODER_METHOD, 
+			 cls_x86decoder_decode, 2);
+
+	/* Intel Decoder */
+	clsX86IntelDecoder = rb_define_class_under(modOpdis, "X86IntelDecoder", 
+					           clsDecoder);
+	rb_define_method(clsX86IntelDecoder, DECODER_METHOD, 
+			 cls_x86inteldecoder_decode, 2);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1174,19 +1179,34 @@ static void config_buf_from_args( opdis_buf_t * buf, VALUE hash ) {
 }
 
 static opdis_buf_t opdis_buf_for_target( VALUE tgt, VALUE hash ) {
-	// TODO
+	char * buf = NULL;
+	unsigned int buf_len = 0;
+	opdis_buf_t obuf;
+
 	if ( Qtrue == rb_obj_is_kind_of( tgt, rb_cString ) ) {
-		// str 2 buf
+		buf = RSTRING_PTR(tgt);
+		buf_len = RSTRING_LEN(tgt);
 	} else if ( Qtrue == rb_obj_is_kind_of( tgt, rb_cArray ) ) {
-		// array to buf
+		buf = RARRAY_PTR(tgt);
+		buf_len = RARRAY_LEN(tgt);
 	} else if ( Qtrue == rb_obj_is_kind_of( tgt, rb_cIO ) ) {
-		// read file to buf
+		// TODO: read file to buf
+		rb_raise(rb_eNotImpError, "IO support Not implented" );
 	} else {
 		rb_raise(rb_eArgError, "Buffer must be a String, IO or Array");
 	}
 
+	if (! buf || ! buf_len ) {
+		rb_raise(rb_eArgError, "Cannot disassemble empty buffer");
+	}
+
+	obuf = opdis_buf_alloc( buf_len, 0 );
+	opdis_buf_fill( obuf, 0, buf, buf_len );
+
 	/* apply target-specific args (vma, etc) */
 	config_buf_from_args( buf, hash );
+
+	return obuf;
 }
 
 struct OPDIS_TGT { bfd * abfd; asection * sec; asymbol * sym; opdis_buf_t buf };
@@ -1282,7 +1302,14 @@ static int perform_disassembly( VALUE instance, opdist_t opdis, VALUE target,
 		}
 		opdis_disasm_bfd_entry( opdis, tgt.abfd );
 	} else {
+		if ( tgt.buf ) {
+			opdis_buf_free(tgt.buf);
+		}
 		rb_raise(rb_eArgError, "Unknown strategy '%s'", strategy);
+	}
+
+	if ( tgt.buf ) {
+		opdis_buf_free(tgt.buf);
 	}
 }
 
