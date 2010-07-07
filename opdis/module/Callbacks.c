@@ -23,12 +23,6 @@ static VALUE str_to_sym( const char * str ) {
 	return rb_funcall(var, symToSym, ));
 }
 
-/* BFD Support (requires BFD gem) */
-static VALUE clsBfd = Qnil;
-static VALUE clsBfdSec = Qnil;
-static VALUE clsBfdSym = Qnil;
-#define GET_BFD_CLASS(cls,name) (cls = cls == Qnil ? rb_path2class(name) : cls);
-
 #define ALLOC_FIXED_INSN opdis_alloc_fixed(128, 32, 16, 32)
 
 /* ---------------------------------------------------------------------- */
@@ -90,7 +84,7 @@ static int invoke_builtin_decoder( OPDIS_DECODER fn, VALUE insn, VALUE hash ) {
 	opdis_off_t length;
 	opdis_insn_t * c_insn = ALLOC_FIXED_INSN();
 
-	insn_to_c( insn, c_insn );
+	Opdis_insnToC( insn, c_insn );
 
 	/* get insn_buf_t from decoder instance; this saves some trouble */
 	Data_Get_Struct( hash, opdis_insn_buf_t, inbuf );
@@ -176,7 +170,7 @@ static VALUE cls_handler_visited( VALUE instance, VALUE insn ) {
 	opdist_t opdis;
 	opdis_insn_t * c_insn = ALLOC_FIXED_INSN();
 
-	insn_to_c( insn, c_insn );
+	Opdis_insnToC( insn, c_insn );
 
 	Data_Get_Struct(instance, opdis_t, opdis);
 	if (! opdis ) {
@@ -218,7 +212,7 @@ static VALUE cls_resolver_resolve( VALUE instance, VALUE insn ) {
 	int rv;
 	opdis_insn_t * c_insn = ALLOC_FIXED_INSN();
 
-	insn_to_c( insn, c_insn );
+	Opdis_insnToC( insn, c_insn );
 
 	rb_thread_schedule();
 	rv = opdis_default_resolver( c_insn, NULL );

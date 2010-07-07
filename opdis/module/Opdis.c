@@ -177,7 +177,7 @@ static int local_decoder( const opdis_insn_buf_t in, opdis_insn_t * out,
                           opdis_vma_t vma, opdis_off_t length, void * arg ) {
 	VALUE obj = (VALUE) arg;
 	VALUE hash = rb_hash_new();
-	VALUE insn = insn_from_c(out);
+	VALUE insn = Opdis_insnFromC(out);
 
 	/* build hash containing insn info */
 	fill_decoder_hash( &hash, in, buf, offset, vma, length );
@@ -212,7 +212,7 @@ static VALUE cls_disasm_set_decoder(VALUE instance, VALUE obj) {
  * object provided by the user. */
 static int local_handler( const opdis_insn_t * i, void * arg ) {
 	VALUE obj = (VALUE) arg;
-	VALUE insn = insn_from_c(i);
+	VALUE insn = Opdis_insnFromC(i);
 
 	/* invoke visited? method in Handler object */
 	VALUE var = rb_funcall(obj, symVisited, 1, insn);
@@ -246,7 +246,7 @@ static VALUE cls_disasm_set_handler(VALUE instance, VALUE obj) {
  * provided by the user */
 static opdis_vma_t local_resolver ( const opdis_insn_t * i, void * arg ) {
 	VALUE obj = (VALUE) arg;
-	VALUE insn = insn_from_c(i);
+	VALUE insn = Opdis_insnFromC(i);
 
 	/* invoke resolve method in Resolver object */
 	VALUE vma = rb_funcall(obj, symResolve, 1, insn);
@@ -416,7 +416,7 @@ static void cls_disasm_handle_args( VALUE instance, VALUE hash ) {
 /* local display handler for blocks: this yields the current insn to arg */
 static void local_block_display( const opdis_insn_t * i, void * arg ) {
 	VALUE block = (VALUE) arg;
-	VALUE insn = insn_from_c(i);
+	VALUE insn = Opdis_insnFromC(i);
 
 	rb_funcall(block, symCall, 1, insn);
 }
@@ -424,7 +424,7 @@ static void local_block_display( const opdis_insn_t * i, void * arg ) {
 /* local display handler: this adds instructions to a Disassembly object */
 static void local_display( const opdis_insn_t * i, void * arg ) {
 	VALUE output = (VALUE) arg;
-	VALUE insn = insn_from_c(i);
+	VALUE insn = Opdis_insnFromC(i);
 
 	rb_hash_aset( output, INT2NUM(i->vma), insn );
 }

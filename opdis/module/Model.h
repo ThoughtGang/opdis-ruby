@@ -8,6 +8,9 @@
 #ifndef OPDIS_RB_MODEL_H
 #define OPDIS_RB_MODEL_H
 
+#include <opdis.h>
+#include <ruby.h>
+
 /* Instruction Class */
 #define INSN_DECODE_BASIC_NAME "DECODE_BASIC"
 #define INSN_DECODE_BASIC "basic"
@@ -223,5 +226,7 @@
 #define REG_FLAG_RET "return"
 
 void Opdis_initModel( VALUE modOpdis );
+VALUE Opdis_insnFromC( opdis_insn_t * insn );
+int Opdis_insnToC( VALUE insn, opdis_insn_t * c_insn );
 
 #endif

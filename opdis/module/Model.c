@@ -1208,6 +1208,9 @@ static void init_insn_class( VALUE modOpdis ) {
 	define_insn_constants();
 }
 
+/* ---------------------------------------------------------------------- */
+/* Public API */
+
 void Opdis_initModel( VALUE modOpdis ) {
 	symToSym = rb_intern("to_sym");
 	symToS = rb_intern("to_s");
@@ -1219,3 +1222,16 @@ void Opdis_initModel( VALUE modOpdis ) {
         init_reg_class(modOpdis);
 }
 
+VALUE Opdis_insnFromC( opdis_insn_t * insn ) {
+	return (insn == NULL) ? Qnil : insn_from_c(insn);
+}
+
+int Opdis_insnToC( VALUE insn, opdis_insn_t * c_insn ) {
+	if (insn == Qnil || c_insn == NULL) {
+		return 0;
+	}
+
+	insn_to_c( insn, c_insn );
+
+	return 1;
+}
