@@ -11,13 +11,14 @@
 
 #include "Model.h"
 
+static VALUE symToSym, symToS;
 
 #define IVAR(attr) "@" attr
 #define SETTER(attr) attr "="
 
 static VALUE str_to_sym( const char * str ) {
 	VALUE var = rb_str_new_cstr(str);
-	return rb_funcall(var, rb_intern("to_sym"), 0);
+	return rb_funcall(var, symToSym, 0);
 }
 
 
@@ -39,34 +40,8 @@ static VALUE cls_generic_to_s( VALUE instance ) {
 static VALUE clsOp;
 
 static VALUE cls_op_init(VALUE instance, VALUE hash) {
-	// TODO
-	/* set instance variables */
-	//rb_iv_set(instance, IVAR(SYM_ATTR_NAME), rb_str_new_cstr(info.name) );
 	rb_iv_set(instance, IVAR(INSN_ATTR_FLAGS), rb_ary_new() );
 	return instance;
-}
-
-static void fill_ruby_op( opdis_op_t * op, VALUE dest ) {
-	// TODO
-}
-
-static VALUE op_from_c( opdis_op_t * op ) {
-	switch (op->category) {
-		case opdis_op_cat_register:
-		case opdis_op_cat_immediate:
-		case opdis_op_cat_absolute:
-		case opdis_op_cat_expr:
-		case opdis_op_cat_unknown:
-		default;
-	}
-
-	//VALUE var = rb_class_new(clsOp);
-	//fill_ruby_op(op, var);
-	return var;
-}
-
-static void op_to_c( VALUE op, opdis_op_t * dest ) {
-	// TODO
 }
 
 static void define_op_constants() {
@@ -86,20 +61,17 @@ static void init_op_class( VALUE modOpdis ) {
 	rb_define_method(clsOp, "to_s", cls_generic_to_s, 0);
 
 	define_op_constants();
-	// TODO
 
 	/* read-only attributes */
-	//rb_define_attr(clsDisasm, DIS_ATTR_, 1, 0);
-
-	/* setters */
-	//rb_define_method(clsDisasm, DIS_ATTR_, cls_disasm_, 1);
+	rb_define_attr(clsOp, OP_ATTR_FLAGS, 1, 0);
+	rb_define_attr(clsOp, GEN_ATTR_ASCII, 1, 1);
+	rb_define_attr(clsOp, OP_ATTR_DATA_SIZE, 1, 1);
 }
 
 /* ---------------------------------------------------------------------- */
 /* Register Class */
 
 static VALUE clsReg;
-
 
 static void set_ruby_reg_flags( VALUE instance, enum opdis_reg_flag_t val ) {
 	VALUE flags = rb_iv_get(instance, IVAR(REG_ATTR_FLAGS) );
@@ -350,8 +322,8 @@ static void init_abs_addr_attributes( VALUE class ) {
 
 static void cls_absaddr_to_s( VALUE instance ) {
 	VALUE str;
-	// TODO: replace this with hex
-	VALUE off = rb_any_to_s(rb_iv_get(instance, IVAR(ABS_ADDR_ATTR_OFF)));
+	VALUE off = rb_funcall( rb_iv_get(instance, IVAR(ABS_ADDR_ATTR_OFF)),
+				symToS, 1, INT2NUM(16) );
 	VALUE seg = rb_iv_get(instance, IVAR(ABS_ADDR_ATTR_SEG));
 
 	if ( seg == Qnil ) {
@@ -382,7 +354,7 @@ static void init_absaddr_class( VALUE modOpdis ) {
 /* ---------------------------------------------------------------------- */
 /* Address Expression Class */
 
-static VALUE clsAddrExp;
+static VALUE clsAddrExprOp;
 
 static enum opdis_addr_expr_shift_t get_expr_shift( const char * str ) {
 	if (! strcmp( ADDR_EXP_SHIFT_LSL, str ) ) {
@@ -445,7 +417,7 @@ static void fill_ruby_addrexpr( opdis_addr_expr_t * expr, VALUE dest ) {
 }
 
 static VALUE addrexpr_from_c( opdis_addr_expr_t * expr ) {
-	VALUE var = rb_class_new(clsAddrExp);
+	VALUE var = rb_class_new(clsAddrExprOp);
 	return fill_ruby_addrexpr( expr, var );
 }
 
@@ -537,36 +509,35 @@ static VALUE cls_addrexpr_to_s( VALUE instance ) {
 		if ( needs_plus ) {
 			rb_str_buf_cat_ascii(str, "+");
 		}
-		// TODO: hex str
-		rb_str_concat(str, rb_any_to_s(val));
+		rb_str_concat( str, rb_funcall(val, symToS, 1, INT2NUM(16)) );
 	}
 
 	return str
 }
 
 static void init_addrexp_class( VALUE modOpdis ) {
-	clsAddrExp = rb_define_class_under(modOpdis, "AddressExpression", 
-					   clsOp);
-	rb_singleton_method(clsAddrExp, "initialize", cls_addrexpr_init, 1);
-	rb_define_method(clsAddrExp, "to_s", cls_addrexpr_to_s, 0);
+	clsAddrExprOp = rb_define_class_under(modOpdis, 
+					"AddressExpressionOperand", clsOp);
+	rb_singleton_method(clsAddrExprOp, "initialize", cls_addrexpr_init, 1);
+	rb_define_method(clsAddrExprOp, "to_s", cls_addrexpr_to_s, 0);
 
 	/* read-write attributes */
-	rb_define_attr(clsAddrExp, ADDR_EXP_ATTR_SHIFT, 1, 1);
-	rb_define_attr(clsAddrExp, ADDR_EXP_ATTR_SCALE, 1, 1);
-	rb_define_attr(clsAddrExp, ADDR_EXP_ATTR_INDEX, 1, 1);
-	rb_define_attr(clsAddrExp, ADDR_EXP_ATTR_BASE, 1, 1);
-	rb_define_attr(clsAddrExp, ADDR_EXP_ATTR_DISP, 1, 1);
+	rb_define_attr(clsAddrExprOp, ADDR_EXP_ATTR_SHIFT, 1, 1);
+	rb_define_attr(clsAddrExprOp, ADDR_EXP_ATTR_SCALE, 1, 1);
+	rb_define_attr(clsAddrExprOp, ADDR_EXP_ATTR_INDEX, 1, 1);
+	rb_define_attr(clsAddrExprOp, ADDR_EXP_ATTR_BASE, 1, 1);
+	rb_define_attr(clsAddrExprOp, ADDR_EXP_ATTR_DISP, 1, 1);
 
 	/* constants */
-	rb_define_const(clsAddrExp, ADDR_EXP_SHIFT_LSL_NAME,
+	rb_define_const(clsAddrExprOp, ADDR_EXP_SHIFT_LSL_NAME,
 			rb_str_new_cstr(ADDR_EXP_SHIFT_LSL));
-	rb_define_const(clsAddrExp, ADDR_EXP_SHIFT_LSR_NAME,
+	rb_define_const(clsAddrExprOp, ADDR_EXP_SHIFT_LSR_NAME,
 			rb_str_new_cstr(ADDR_EXP_SHIFT_LSR));
-	rb_define_const(clsAddrExp, ADDR_EXP_SHIFT_ASL_NAME,
+	rb_define_const(clsAddrExprOp, ADDR_EXP_SHIFT_ASL_NAME,
 			rb_str_new_cstr(ADDR_EXP_SHIFT_ASL));
-	rb_define_const(clsAddrExp, ADDR_EXP_SHIFT_ROR_NAME,
+	rb_define_const(clsAddrExprOp, ADDR_EXP_SHIFT_ROR_NAME,
 			rb_str_new_cstr(ADDR_EXP_SHIFT_ROR));
-	rb_define_const(clsAddrExp, ADDR_EXP_SHIFT_RRX_NAME,
+	rb_define_const(clsAddrExprOp, ADDR_EXP_SHIFT_RRX_NAME,
 			rb_str_new_cstr(ADDR_EXP_SHIFT_RRX));
 }
  
@@ -608,6 +579,31 @@ static void init_imm_class( VALUE modOpdis ) {
 /* ---------------------------------------------------------------------- */
 /* Operand Factory */
 
+static enum opdis_op_flag_t val op_flags_code( VALUE op ) {
+	int i;
+	enum opdis_op_flag_t flags = opdis_op_flag_none;
+	struct RArray * ary = RARRAY( rb_iv_get(op, IVAR(OP_ATTR_FLAGS)) );
+
+	for ( i=0; i < ary->len; i++ ) {
+		VALUE val = ary->ptr[i];
+		if (! strcmp(OP_FLAG_R, StringValueCStr(val)) ) {
+			flags |= opdis_op_flag_r;
+		} else if (! strcmp(OP_FLAG_W, StringValueCStr(val)) ) {
+			flags |= opdis_op_flag_w;
+		} else if (! strcmp(OP_FLAG_X, StringValueCStr(val)) ) {
+			flags |= opdis_op_flag_x;
+		} else if (! strcmp(OP_FLAG_SIGNED, StringValueCStr(val)) ) {
+			flags |= opdis_op_flag_signed;
+		} else if (! strcmp(OP_FLAG_ADDR, StringValueCStr(val)) ) {
+			flags |= opdis_op_flag_address;
+		} else if (! strcmp(OP_FLAG_IND, StringValueCStr(val)) ) {
+			flags |= opdis_op_flag_indirect;
+		}
+	}
+
+	return flags;
+}
+
 static void set_rb_op_flags( VALUE instance, enum opdis_op_flag_t val ) {
 	VALUE flags = rb_iv_get(instance, IVAR(OP_ATTR_FLAGS) );
 	if ( val & opdis_op_flag_r ) {
@@ -628,6 +624,34 @@ static void set_rb_op_flags( VALUE instance, enum opdis_op_flag_t val ) {
 	if ( val & opdis_op_flag_indirect ) {
 		rb_arry_push(status, rb_str_new_cstr(OP_FLAG_IND) );
 	}
+}
+
+static void op_to_c( VALUE op, opdis_op_t * dest ) {
+	VALUE var;
+
+	if ( Qtrue == rb_obj_is_kind_of( op, clsImmOp) ) {
+		dest->category = opdis_op_cat_immediate;
+		dest->value.immediate.u = imm_to_c( op );
+
+	} else if ( Qtrue == rb_obj_is_kind_of( op, clsRegOp) ) {
+		dest->category = opdis_op_cat_register;
+		reg_to_c( op, &dest->value.reg );
+
+	} else if ( Qtrue == rb_obj_is_kind_of( op, clsAddrExprOp) ) {
+		dest->category = opdis_op_cat_expr;
+		addrexpr_to_c( op, &dest->value.expr );
+
+	} else if ( Qtrue == rb_obj_is_kind_of( op, clsAbsAddrOp) ) {
+		dest->category = opdis_op_cat_absolute;
+		absaddrexpr_to_c( op, &dest->value.abs );
+	}
+
+	var = rb_iv_get(op, IVAR(GEN_ATTR_ASCII));
+	opdis_op_set_ascii(dest, StringValueCStr(var));
+
+	dest->data_size = (unsigned char) NUM2UINT(rb_iv_get(op, 
+							IVAR(OP_ATTR_DATA_SZ)));
+	dest->flags = op_flags_code( op );
 }
 
 static VALUE op_from_c( opdis_op_t * op ) {
@@ -674,11 +698,7 @@ static const char * insn_type_to_str( enum dis_insn_type t ) {
 	return s;
 }
 
-static VALUE cls_insn_init(VALUE instance, VALUE hash) {
-	// TODO: off, vma, size, bytes
-	/* set instance variables */
-	//rb_iv_set(instance, IVAR(SYM_ATTR_NAME), rb_str_new_cstr(info.name) );
-
+static VALUE cls_insn_init(VALUE instance) {
 	rb_iv_set(instance, IVAR(INSN_ATTR_OPERANDS), rb_ary_new() );
 	rb_iv_set(instance, IVAR(INSN_ATTR_STATUS), rb_ary_new() );
 
@@ -690,6 +710,178 @@ static void set_attr_if_alias( VALUE instance, const char * name, int idx,
 	if ( a && b && a == b ) {
 		rb_iv_set(instance, name, INT2NUM(idx) );
 	}
+}
+
+
+static enum opdis_insn_cat_t insn_category_code( VALUE insn ) {
+	VALUE val = rb_iv_get(insn, IVAR(INSN_ATTR_CATEGORY));
+	if (! strcmp(INSN_CAT_CFLOW , StringValueCStr(val)) ) {
+		return opdis_insn_cat_cflow;
+	} else if (! strcmp(INSN_CAT_STACK , StringValueCStr(val)) ) {
+		return opdis_insn_cat_stack;
+	} else if (! strcmp(INSN_CAT_LOST , StringValueCStr(val)) ) {
+		return opdis_insn_cat_lost;
+	} else if (! strcmp(INSN_CAT_TEST , StringValueCStr(val)) ) {
+		return opdis_insn_cat_test;
+	} else if (! strcmp(INSN_CAT_MATH , StringValueCStr(val)) ) {
+		return opdis_insn_cat_math;
+	} else if (! strcmp(INSN_CAT_BIT , StringValueCStr(val)) ) {
+		return opdis_insn_cat_bit;
+	} else if (! strcmp(INSN_CAT_IO , StringValueCStr(val)) ) {
+		return opdis_insn_cat_io;
+	} else if (! strcmp(INSN_CAT_TRAP , StringValueCStr(val)) ) {
+		return opdis_insn_cat_trap;
+	} else if (! strcmp(INSN_CAT_PRIV , StringValueCStr(val)) ) {
+		return opdis_insn_cat_priv;
+	} else if (! strcmp(INSN_CAT_NOP , StringValueCStr(val)) ) {
+		return opdis_insn_cat_nop;
+	}
+
+	return opdis_insn_cat_unknown;
+}
+
+static enum opdis_insn_subset_t insn_isa_code( VALUE insn ) {
+	VALUE val = rb_iv_get(insn, IVAR(INSN_ATTR_ISA));
+	if (! strcmp(INSN_ISA_FPU , StringValueCStr(val)) ) {
+		return opdis_insn_subset_fpu;
+	} else if (! strcmp(INSN_ISA_GPU , StringValueCStr(val)) ) {
+		return opdis_insn_subset_gpu;
+	} else if (! strcmp(INSN_ISA_SIMD , StringValueCStr(val)) ) {
+		return opdis_insn_subset_simd;
+	} else if (! strcmp(INSN_ISA_VM , StringValueCStr(val)) ) {
+		return opdis_insn_subset_vm;
+	}
+
+	return opdis_insn_subset_gen;
+}
+
+static void insn_set_flags( opdis_insn_t * dest, VALUE insn ) {
+	enum opdis_decode_t status = opdis_decode_invalid;
+	struct RArray * ary = RARRAY( rb_iv_get(reg, IVAR(INSN_ATTR_FLAGS)) );
+
+	dest->flags.cflow = opdis_cflow_flag_none;
+
+	for ( i=0; i < ary->len; i++ ) {
+		VALUE val = ary->ptr[i];
+		switch (dest->category) {
+			case opdis_insn_cat_cflow:
+				if (! strcmp(INSN_FLAG_CALL, 
+					     StringValueCStr(val)) ) {
+					dest->flags.cflow |= 
+						opdis_cflow_flag_call;
+				} else if (! strcmp(INSN_FLAG_CALLCC, 
+						    StringValueCStr(val)) ) {
+					dest->flags.cflow |= 
+						opdis_cflow_flag_callcc;
+				} else if (! strcmp(INSN_FLAG_JMP, 
+						    StringValueCStr(val)) ) {
+					dest->flags.cflow |= 
+						opdis_cflow_flag_jmp;
+				} else if (! strcmp(INSN_FLAG_JMPCC, 
+						    StringValueCStr(val)) ) {
+					dest->flags.cflow |= 
+						opdis_cflow_flag_jmpcc;
+				} else if (! strcmp(INSN_FLAG_RET, 
+						    StringValueCStr(val)) ) {
+					dest->flags.cflow |= 
+						opdis_cflow_flag_ret;
+				}
+				break;
+			case opdis_insn_cat_stack:
+				if (! strcmp(INSN_FLAG_PUSH, 
+					     StringValueCStr(val)) ) {
+					dest->flags.stack |= 
+						opdis_stack_flag_push;
+				} else if (! strcmp(INSN_FLAG_POP, 
+						    StringValueCStr(val)) ) {
+					dest->flags.stack |= 
+						opdis_stack_flag_pop;
+				} else if (! strcmp(INSN_FLAG_FRAME, 
+						    StringValueCStr(val)) ) {
+					dest->flags.stack |= 
+						opdis_stack_flag_frame;
+				} else if (! strcmp(INSN_FLAG_UNFRAME, 
+						    StringValueCStr(val)) ) {
+					dest->flags.stack |= 
+						opdis_stack_flag_unframe;
+				}
+				break;
+			case opdis_insn_cat_bit:
+				if (! strcmp(INSN_FLAG_AND, 
+					     StringValueCStr(val)) ) {
+					dest->flags.bit |= opdis_bit_flag_and;
+				} else if (! strcmp(INSN_FLAG_OR, 
+						    StringValueCStr(val)) ) {
+					dest->flags.bit |= opdis_bit_flag_or;
+				} else if (! strcmp(INSN_FLAG_XOR, 
+						    StringValueCStr(val)) ) {
+					dest->flags.bit |= opdis_bit_flag_xor;
+				} else if (! strcmp(INSN_FLAG_NOT, 
+						    StringValueCStr(val)) ) {
+					dest->flags.bit |= opdis_bit_flag_not;
+				} else if (! strcmp(INSN_FLAG_LSL, 
+						    StringValueCStr(val)) ) {
+					dest->flags.bit |= opdis_bit_flag_lsl;
+				} else if (! strcmp(INSN_FLAG_LSR, 
+						    StringValueCStr(val)) ) {
+					dest->flags.bit |= opdis_bit_flag_lsr;
+				} else if (! strcmp(INSN_FLAG_ASL, 
+						    StringValueCStr(val)) ) {
+					dest->flags.bit |= opdis_bit_flag_asl;
+				} else if (! strcmp(INSN_FLAG_ASR, 
+						    StringValueCStr(val)) ) {
+					dest->flags.bit |= opdis_bit_flag_asr;
+				} else if (! strcmp(INSN_FLAG_ROL, 
+						    StringValueCStr(val)) ) {
+					dest->flags.bit |= opdis_bit_flag_rol;
+				} else if (! strcmp(INSN_FLAG_ROR, 
+						    StringValueCStr(val)) ) {
+					dest->flags.bit |= opdis_bit_flag_ror;
+				} else if (! strcmp(INSN_FLAG_RCL, 
+						    StringValueCStr(val)) ) {
+					dest->flags.bit |= opdis_bit_flag_rcl;
+				} else if (! strcmp(INSN_FLAG_RCR, 
+						    StringValueCStr(val)) ) {
+					dest->flags.bit |= opdis_bit_flag_rcr;
+				}
+				break;
+			case opdis_insn_cat_io:
+				if (! strcmp(INSN_FLAG_OUT, 
+					     StringValueCStr(val)) ) {
+					dest->flags.io |= opdis_io_flag_in;
+				} else if (! strcmp(INSN_FLAG_IN, 
+						    StringValueCStr(val)) ) {
+					dest->flags.io |= opdis_io_flag_out;
+				}
+				break;
+			default:
+		}
+	}
+}
+
+static enum opdis_decode_t val insn_status_code( VALUE instance ) {
+	int i;
+	enum opdis_decode_t status = opdis_decode_invalid;
+	struct RArray * ary = RARRAY( rb_iv_get(reg, IVAR(INSN_ATTR_STATUS)) );
+
+	for ( i=0; i < ary->len; i++ ) {
+		VALUE val = ary->ptr[i];
+		if (! strcmp(INSN_STATUS_BASIC, StringValueCStr(val)) ) {
+			status |= opdis_decode_basic;
+		} else if (! strcmp(INSN_STATUS_MNEM, StringValueCStr(val)) ) {
+			status |= opdis_decode_mnem;
+		} else if (! strcmp(INSN_STATUS_OPS, StringValueCStr(val)) ) {
+			status |= opdis_decode_ops;
+		} else if (! strcmp(INSN_STATUS_MNEM_FLG, 
+				    StringValueCStr(val)) ) {
+			status |= opdis_decode_mnem_flags;
+		} else if (! strcmp(INSN_STATUS_OP_FLG, 
+				    StringValueCStr(val)) ) {
+			status |= opdis_decode_op_flags;
+		}
+	}
+
+	return status;
 }
 
 static void set_insn_status( VALUE instance, enum opdis_decode_t val ) {
@@ -729,7 +921,7 @@ static void fill_ruby_insn( opdis_insn_t * insn, VALUE dest ) {
 		  rb_str_new(insn->bytes, insn->size ));
 
 	rb_iv_set(dest, IVAR(INSN_ATTR_PREFIXES), 
-		  rb_str_new_cstr(insn->prefixes));
+		  rb_str_split(rb_str_new_cstr(insn->prefixes), " "));
 	rb_iv_set(dest, IVAR(INSN_ATTR_MNEMONIC), 
 		  rb_str_new_cstr(insn->mnemonic));
 	rb_iv_set(dest, IVAR(INSN_ATTR_COMMENT), 
@@ -740,8 +932,9 @@ static void fill_ruby_insn( opdis_insn_t * insn, VALUE dest ) {
 	opdis_insn_isa_str( insn, buf, 128 );
 	rb_iv_set(dest, IVAR(INSN_ATTR_ISA), rb_str_new_cstr(buf));
 
-	opdis_insn_flags_str( insn, buf, 128 );
-	rb_iv_set(dest, IVAR(INSN_ATTR_FLAGS), rb_str_new_cstr(buf));
+	opdis_insn_flags_str( insn, buf, 128, "|" );
+	rb_iv_set(dest, IVAR(INSN_ATTR_FLAGS), 
+		  rb_str_split(rb_str_new_cstr(buf), "|"));
 
 	rb_array_clear(ops);
 	for ( i=0; i < insn->num_operands; i++ ) {
@@ -763,7 +956,68 @@ static VALUE insn_from_c( opdis_insn_t * insn ) {
 }
 
 static void insn_to_c( VALUE insn, opdis_insn_t * dest ) {
-	// TODO
+	int i;
+	VALUE var;
+	struct RArray * ary;
+
+	dest->status = insn_status_code(insn);
+
+	var = rb_iv_get(insn, IVAR(GEN_ATTR_ASCII));
+	opdis_insn_set_ascii(dest, StringValueCStr(var));
+
+	var = rb_iv_get(insn, IVAR(INSN_ATTR_OFFSET));
+	dest->offset = (opdis_off_t) NUL2ULL(var);
+
+	var = rb_iv_get(insn, IVAR(INSN_ATTR_VMA));
+	dest->vma = (opdis_vma_t) NUL2ULL(var);
+
+	var = rb_iv_get(insn, IVAR(INSN_ATTR_SIZE));
+	dest->size = (opdis_off_t) NUL2ULL(var);
+
+	var = rb_iv_get(insn, IVAR(INSN_ATTR_BYTES));
+	if (! dest->bytes ) {
+		dest->bytes = calloc( 1, dest->size );
+	}
+	memcpy( dest->bytes, RSTRING_PTR(var), dest->size );
+
+	ary = RARRAY( rb_iv_get(reg, IVAR(INSN_ATTR_PREFIXES)) );
+	for ( i=0; i < ary->len; i++ ) {
+		VALUE val = ary->ptr[i];
+		opdis_insn_add_prefix(dest, StringValueCStr(val));
+	}
+
+	var = rb_iv_get(insn, IVAR(INSN_ATTR_MNEMONIC));
+	opdis_insn_set_mnemonic(dest, StringValueCStr(var));
+
+	var = rb_iv_get(insn, IVAR(INSN_ATTR_COMMENT));
+	opdis_insn_add_comment(dest, StringValueCStr(var));
+
+	dest->category = insn_category_code(insn);
+	dest->isa = insn_isa_code(insn);
+
+	insn_set_flags(dest, insn);
+
+	ary = RARRAY( rb_iv_get(reg, IVAR(INSN_ATTR_OPERANDS)) );
+	for ( i=0; i < ary->len; i++ ) {
+		VALUE val = ary->ptr[i];
+		opdis_op_t * op = opdis_insn_next_avail_op(dest);
+		if (! op ) {
+			op = opdis_op_alloc();
+			opdis_insn_add_operand(op);
+		}
+
+		op_to_c( val, op );
+
+		if ( i == NUM2INT(rb_iv_get(insn, IVAR(INSN_ATTR_TGT_IDX))) ) {
+			dest->target = op;
+		}
+		if ( i == NUM2INT(rb_iv_get(insn, IVAR(INSN_ATTR_DEST_IDX))) ) {
+			dest->dest = op;
+		}
+		if ( i == NUM2INT(rb_iv_get(insn, IVAR(INSN_ATTR_SRC_IDX))) ) {
+			dest->src = op;
+		}
+	}
 }
 
 static VALUE get_aliased_operand( VALUE instance, const char * alias ) {
@@ -782,6 +1036,40 @@ static VALUE cls_insn_dest( VALUE instance ) {
 
 static VALUE cls_insn_src( VALUE instance ) {
 	return get_aliased_operand(instance, IVAR(INSN_ATTR_SRC_IDX) );
+}
+
+static int is_cflow_insn( VALUE instance ) {
+	VALUE cat = rb_iv_get(instance, IVAR(INSN_ATTR_CATEGORY) );
+	return (cat != Qnil && ! strcmp(INSN_CAT_CFLOW, StringValueCStr(cat))) ?
+		1 : 0;
+}
+
+static int insn_has_flag( VALUE instance, const char * flg ) {
+	VALUE flags = rb_iv_get(instance, IVAR(INSN_ATTR_FLAGS) );
+	return (flags != Qnil && rb_ary_includes(flags, rb_str_new_cstr(flg))) ?
+		1 : 0;
+}
+
+static VALUE cls_insn_branch( VALUE instance ) {
+	if ( is_cflow_insn(instance) && 
+	     (insn_has_flag(instance, INSN_FLAG_CALL) ||
+	      insn_has_flag(instance, INSN_FLAG_CALLCC) ||
+	      insn_has_flag(instance, INSN_FLAG_JMPCC) ||
+	      insn_has_flag(instance, INSN_FLAG_JMP)) ) {
+		return Qtrue;
+	}
+
+	return Qfalse;
+}
+
+static VALUE cls_insn_fallthrough( VALUE instance ) {
+	if ( is_cflow_insn(instance) && 
+	     (insn_has_flag(instance, INSN_FLAG_RET) ||
+	      insn_has_flag(instance, INSN_FLAG_JMP)) ) {
+		return Qfalse;
+	}
+
+	return Qtrue;
 }
 
 static void define_insn_constants() {
@@ -913,11 +1201,21 @@ static void init_insn_class( VALUE modOpdis ) {
 	clsInsn = rb_define_class_under(modOpdis, "Instruction", rb_cObject);
 	rb_define_method(clsInsn, "initialize", cls_insn_new, 1);
 	rb_define_method(clsInsn, "to_s", cls_generic_to_s, 0);
-	// TODO:
-	// is_branch?
-	// fallthrough?
+	rb_define_method(clsInsn, "branch?", cls_insn_branch, 0);
+	rb_define_method(clsInsn, "fallthrough?", cls_insn_fallthrough, 0);
 
 	define_insn_attributes();
 	define_insn_constants();
+}
+
+void Opdis_initModel( VALUE modOpdis ) {
+	symToSym = rb_intern("to_sym");
+	symToS = rb_intern("to_s");
+
+	init_insn_class(modOpdis);
+        init_op_class(modOpdis);
+        init_absaddr_class(modOpdis);
+        init_addrexp_class(modOpdis);
+        init_reg_class(modOpdis);
 }
 

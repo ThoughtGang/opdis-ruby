@@ -74,32 +74,6 @@
 #define OUT_ATTR_ERRORS "errors"
 #define OUT_METHOD_CONTAIN "containing"
 
-/* Resolver */
-
-#define RESOLVER_METHOD "resolve"
-
-/* Handler */
-
-#define HANDLER_METHOD "visited?"
-
-/* Decoder */
-
-#define DECODER_METHOD "decode"
-
-/* info provided to decoder */
-#define DECODER_MEMBER_VMA "vma"
-#define DECODER_MEMBER_OFF "offset"
-#define DECODER_MEMBER_LEN "size"
-#define DECODER_MEMBER_BUF "buffer"
-#define DECODER_MEMBER_ITEMS "items"
-#define DECODER_MEMBER_STR "raw_insn"
-#define DECODER_MEMBER_DELAY "branch_delay"
-#define DECODER_MEMBER_DATA "data_size"
-#define DECODER_MEMBER_TYPE "type"
-#define DECODER_MEMBER_TGT "target"
-#define DECODER_MEMBER_TGT2 "target2"
-
-
 /* BFD */
 #define BFD_TGT_PATH "Bfd::Target"
 #define BFD_SEC_PATH "Bfd::Section"

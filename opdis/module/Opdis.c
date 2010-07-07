@@ -20,15 +20,18 @@
 #include <opdis.h>
 
 #include "Opdis.h"
+#include "Callbacks.h"
 #include "Model.h"
 
 
 #define IVAR(attr) "@" attr
 #define SETTER(attr) attr "="
 
+static VALUE symToSym, symRead, symCall, symAppend, symSize;
+
 static VALUE str_to_sym( const char * str ) {
 	VALUE var = rb_str_new_cstr(str);
-	return rb_funcall(var, rb_intern("to_sym"), 0);
+	return rb_funcall(var, symToSym, ));
 }
 
 /* BFD Support (requires BFD gem) */
@@ -36,201 +39,6 @@ static VALUE clsBfd = Qnil;
 static VALUE clsBfdSec = Qnil;
 static VALUE clsBfdSym = Qnil;
 #define GET_BFD_CLASS(cls,name) (cls = cls == Qnil ? rb_path2class(name) : cls);
-
-#define ALLOC_FIXED_INSN opdis_alloc_fixed(128, 32, 16, 32)
-
-/* ---------------------------------------------------------------------- */
-/* Decoder Class */
-
-static VALUE clsDecoder;
-
-static void fill_decoder_hash( VALUE * hash, const opdis_insn_buf_t in, 
-                               const opdis_byte_t * buf, opdis_off_t offset,
-                               opdis_vma_t vma, opdis_off_t length ) {
-	int i;
-	VALUE ary;
-	char info = in->insn_info_valid;
-
-	/* instruction location and size */
-	rb_hash_aset( *hash, str_to_sym(DECODE_MEMBER_VMA), INT2NUM(vma) );
-	rb_hash_aset( *hash, str_to_sym(DECODE_MEMBER_OFF), INT2NUM(offset) );
-	rb_hash_aset( *hash, str_to_sym(DECODE_MEMBER_LEN), INT2NUM(length) );
-
-	/* target buffer */
-	rb_hash_aset( *hash, str_to_sym(DECODE_MEMBER_BUF), 
-		      rb_str_new( (const char *) buf, offset + length ) );
-	
-	/* decode instruction as provided by libopcodes */
-
-	/* 1. get items from opdis_insn_buf_t */
-	ary = rb_ary_new();
-	for ( i = 0; i < in->item_count; i++ ) {
-		rb_ary_push( ary, rb_str_new_cstr(in->items[i]) );
-	}
-	rb_hash_aset( *hash, str_to_sym(DECODE_MEMBER_ITEMS), ary );
-
-	/* 2. get raw ASCII version of insn from libopcodes */
-	rb_hash_aset( *hash, str_to_sym(DECODE_MEMBER_STR), 
-		      rb_str_new_cstr(in->string) );
-
-	/* 3. get instruction metadata set by libopcodes */
-	rb_hash_aset( *hash, str_to_sym(DECODE_MEMBER_DELAY), 
-		      info ? INT2NUM(in->branch_delay_insns) : Qnil);
-	rb_hash_aset( *hash, str_to_sym(DECODE_MEMBER_DATA), 
-		      info ? INT2NUM(in->data_size) : Qnil);
-	rb_hash_aset( *hash, str_to_sym(DECODE_MEMBER_TYPE), 
-		      info ? INT2NUM((int) in->insn_type) : Qnil);
-	rb_hash_aset( *hash, str_to_sym(DECODE_MEMBER_TGT), 
-		      info ? INT2NUM(in->target) : Qnil);
-	rb_hash_aset( *hash, str_to_sym(DECODE_MEMBER_TGT2), 
-		      info ? INT2NUM(in->target2) : Qnil );
-
-	/* here we cheat and store insn_buf in hash in case one of the local
-	 * decoder base classes gets called */
-	instance = Data_Wrap_Struct(*hash, NULL, NULL, in);
-}
-
-static int invoke_builtin_decoder( OPDIS_DECODER fn, VALUE insn, VALUE hash ) {
-	opdis_insn_buf_t inbuf;
-        opdis_byte_t * buf;
-	opdis_off_t offset;
-        opdis_vma_t vma;
-	opdis_off_t length;
-	opdis_insn_t * c_insn = ALLOC_FIXED_INSN();
-
-	insn_to_c( insn, c_insn );
-
-	/* get insn_buf_t from decoder instance; this saves some trouble */
-	Data_Get_Struct( hash, opdis_insn_buf_t, inbuf );
-	if (! inbuf ) {
-		/* something went wrong: we weren't called from local_decoder */
-		rb_raise( rb_eRuntimeError, "opdis_insn_buf_t not found" );
-	}
-
-	/* convert decoder arguments to C */
-	var = rb_hash_lookup2(hash, str_to_sym(DECODER_MEMBER_VMA), Qfalse);
-	vma = ( Qfalse != var ) ? NUM2UINT(var) : 0;
-
-	var = rb_hash_lookup2(hash, str_to_sym(DECODER_MEMBER_OFF), Qfalse);
-	offset = ( Qfalse != var ) ? NUM2UINT(var) : 0;
-
-	var = rb_hash_lookup2(hash, str_to_sym(DECODER_MEMBER_LEN), Qfalse);
-	length = ( Qfalse != var ) ? NUM2UINT(var) : 0;
-
-	var = rb_hash_lookup2(hash, str_to_sym(DECODER_MEMBER_BUF), Qfalse);
-	buf = ( Qfalse != var ) ? RSTRING_PTR(buf) : Qnil;
-
-	/* invoke C decoder callback */
-	rv = fn( inbuf, c_insn, buf, offset, vma, length );
-	if ( rv ) {
-		fill_ruby_insn( c_insn, insn );
-	}
-
-	opdis_insn_free(c_insn);
-
-	return rv ? Qtrue : Qfalse;
-}
-
-static VALUE cls_decoder_decode( VALUE instance, VALUE insn, VALUE hash ) {
-	invoke_builtin_decoder(opdis_default_decoder, insn, hash);
-	return insn;
-}
-
-static void init_decoder_class( VALUE modOpdis ) {
-	clsDecoder = rb_define_class_under(modOpdis, "InstructionDecoder", 
-					   rb_cObject);
-	rb_define_method(clsDecoder, DECODER_METHOD, cls_decoder_decode, 2);
-}
-
-/*      ----------------------------------------------------------------- */
-/* 	X86 Decoder Class */
-
-static VALUE clsX86Decoder, clsX86IntelDecoder;
-
-static VALUE cls_x86decoder_decode( VALUE instance, VALUE insn, VALUE hash ) {
-	invoke_builtin_decoder(opdis_x86_att_decoder, insn, hash);
-	return insn;
-}
-
-static VALUE cls_x86inteldecoder_decode(VALUE instance, VALUE insn, VALUE hash){
-	invoke_builtin_decoder(opdis_x86_intel_decoder, insn, hash);
-	return insn;
-}
-
-static void init_x86decoder_class( VALUE modOpdis ) {
-	/* AT&T Decoder */
-	clsX86Decoder = rb_define_class_under(modOpdis, "X86Decoder", 
-					      clsDecoder);
-	rb_define_method(clsX86Decoder, DECODER_METHOD, 
-			 cls_x86decoder_decode, 2);
-
-	/* Intel Decoder */
-	clsX86IntelDecoder = rb_define_class_under(modOpdis, "X86IntelDecoder", 
-					           clsDecoder);
-	rb_define_method(clsX86IntelDecoder, DECODER_METHOD, 
-			 cls_x86inteldecoder_decode, 2);
-}
-
-/* ---------------------------------------------------------------------- */
-/* VisitedAddr Class */
-
-/* Handler class determines whether to continue ? */
-static VALUE clsHandler;
-
-static VALUE cls_handler_visited( VALUE instance, VALUE insn ) {
-	int rv;
-	opdist_t opdis;
-	opdis_insn_t * c_insn = ALLOC_FIXED_INSN();
-
-	insn_to_c( insn, c_insn );
-
-	Data_Get_Struct(instance, opdis_t, opdis);
-	if (! opdis ) {
-		rb_raise(rb_eRuntimeError, "opdis_t not found in Handler");
-	}
-
-	rv = opdis_default_handler(c_insn, opdis);
-	return rv ? Qtrue : Qfalse;
-}
-
-/* NOTE: this uses its own opdis_t with a visited_addr tree */
-static VALUE cls_handler_new( VALUE class ) {
-	VALUE argv[1] = {Qnil};
-	opdist_t opdis = opdis_init();
-	instance = Data_Wrap_Struct(class, NULL, opdis_term, opdis);
-	rb_obj_call_init(instance, 0, argv);
-
-	opdis->visited_addr = opdis_vma_tree_init();
-
-	return init;
-}
-
-static void init_handler_class( VALUE modOpdis ) {
-
-	clsHandler = rb_define_class_under(modOpdis, "VisitedAddressTracker", 
-					   rb_cObject);
-	rb_define_singleton_method(clsHandler, "new", cls_handler_new, 0);
-	rb_define_method(clsHandler, HANDLER_METHOD, cls_handler_visited, 1);
-}
-
-/* ---------------------------------------------------------------------- */
-/* Resolver Class */
-
-static VALUE clsResolver;
-
-static VALUE cls_resolver_resolve( VALUE instance, VALUE insn ) {
-	int rv;
-	opdis_insn_t * c_insn = ALLOC_FIXED_INSN();
-
-	insn_to_c( insn, c_insn );
-	rv = opdis_default_resolver( c_insn, NULL );
-	return INT2NUM(rv);
-}
-
-static void init_resolver_class( VALUE modOpdis ) {
-	cls = rb_define_class_under(modOpdis, "AddressResolver", rb_cObject);
-	rb_define_method(clsResolver, RESOLVER_METHOD, cls_resolver_resolve, 1);
-}
 
 /* ---------------------------------------------------------------------- */
 /* Disasm Output Class */
@@ -241,8 +49,41 @@ static VALUE clsOutput;
 
 /* insn containing vma */
 static VALUE cls_output_contain( VALUE instance, VALUE vma ) {
-	// TODO
-	// return insn containing vma
+	unsigned long long addr = NUM2ULL(vma);
+	/* NOTE: '32 bytes is the largest insn' may not be valid */
+	unsigned long long orig = addr, min = addr - 32;
+	int cont = 1;
+
+	/* iterate backwards from vma looking for insn containing vma */
+	for ( cont = 1; cont > 0 && addr >= min; addr -= 1 ) {
+		unsigned int size;
+		VALUE rb_size;
+		VALUE val = rb_hash_lookup2( instance, ULL2NUM(addr), Qfalse ); 
+
+		if ( val == Qfalse ) {
+			if ( addr == 0 ) {
+				cont = 0;
+			}
+			continue;
+		}
+
+		/* requested vma exists; return it */
+		if ( addr == orig ) {
+			return val;
+		}
+
+		/* does insn contain (insn.size + addr) requested vma? */
+		rb_size = rb_funcall(val, IVAR(INSN_ATTR_SIZE), 0);
+		if ( rb_size == Qnil || addr + NUM2UNIT(rb_size) < orig ) {
+			/* nope - no insn contains requested vma */
+			cont = 0;
+		} else {
+			/* yup - found it */
+			return val;
+		}
+	}
+
+	return Qfalse;
 }
 
 static VALUE cls_output_new( VALUE class ) {
@@ -342,7 +183,7 @@ static int local_decoder( const opdis_insn_buf_t in, opdis_insn_t * out,
 	fill_decoder_hash( &hash, in, buf, offset, vma, length );
 
 	/* invoke decode method in Decoder object */
-	VALUE var = rb_funcall(obj, rb_intern(DECODER_METHOD), 2, insn, hash);
+	VALUE var = rb_funcall(obj, symDecode, 2, insn, hash);
 	return (Qfalse == var || Qnil == var) ? 0 : 1;
 }
 
@@ -374,7 +215,7 @@ static int local_handler( const opdis_insn_t * i, void * arg ) {
 	VALUE insn = insn_from_c(i);
 
 	/* invoke visited? method in Handler object */
-	VALUE var = rb_funcall(obj, rb_intern(HANDLER_METHOD), 1, insn);
+	VALUE var = rb_funcall(obj, symVisited, 1, insn);
 
 	/* True means already visited, so continue = 0 */
 	return (Qtrue == var) ? 0 : 1;
@@ -408,7 +249,7 @@ static opdis_vma_t local_resolver ( const opdis_insn_t * i, void * arg ) {
 	VALUE insn = insn_from_c(i);
 
 	/* invoke resolve method in Resolver object */
-	VALUE vma = rb_funcall(obj, rb_intern(RESOLVER_METHOD), 1, insn);
+	VALUE vma = rb_funcall(obj, symResolve, 1, insn);
 
 	return (Qnil == vma) ? OPDIS_INVALID_ADDR : (opdis_vma_t) NUM2UINT(vma);
 }
@@ -527,7 +368,7 @@ static VALUE cls_disasm_set_arch(VALUE instance, VALUE arch) {
 	return Qfalse;
 }
 
-static VALUE cls_disasm_set_opts(VALUE instance) {
+static VALUE cls_disasm_get_opts(VALUE instance) {
 	opdist_t  opdis;
 	Data_Get_Struct(instance, opdis_t, opdis);
 	return rb_str_new_cstr(opdis->config.disassembler_options);
@@ -577,7 +418,7 @@ static void local_block_display( const opdis_insn_t * i, void * arg ) {
 	VALUE block = (VALUE) arg;
 	VALUE insn = insn_from_c(i);
 
-	rb_funcall(block, rb_intern("call"), 1, insn);
+	rb_funcall(block, symCall, 1, insn);
 }
 
 /* local display handler: this adds instructions to a Disassembly object */
@@ -609,7 +450,7 @@ static void local_error( enum opdis_error_t error, const char * msg,
 	str = rb_str_new_cstr(buf);
 
 	/* append error message to error list */
-	rb_funcall( errors, rb_intern("<<"), 1, rb_str_new_cstr(buf) );
+	rb_funcall( errors, symAppend, 1, rb_str_new_cstr(buf) );
 }
 
 static void config_buf_from_args( opdis_buf_t * buf, VALUE hash ) {
@@ -647,7 +488,7 @@ static opdis_buf_t opdis_buf_for_target( VALUE tgt, VALUE hash ) {
 
 	/* IO object containing bytes */
 	} else if ( Qtrue == rb_obj_is_kind_of( tgt, rb_cIO ) ) {
-		VALUE str = rb_funcall( tgt, rb_intern("read"), 0 );
+		VALUE str = rb_funcall( tgt, symRead, 0 );
 		buf = (unsigned char*) RSTRING_PTR(str);
 		buf_len = RSTRING_LEN(str);
 
@@ -724,9 +565,7 @@ static void perform_disassembly( VALUE instance, opdist_t opdis, VALUE target,
 	var = rb_hash_lookup2(hash, str_to_sym(DIS_ARG_STRATEGY), Qfalse);
 	if ( Qfalse != var ) strategy = StringValueCStr(var);
 
-	// TODO
-	// rb_thread_schedule()
-	// (in every callback?)
+	rb_thread_schedule();
 
 	/* Single instruction disassembly */
 	if (! strcmp( strategy, DIS_STRAT_SINGLE ) ) {
@@ -734,11 +573,12 @@ static void perform_disassembly( VALUE instance, opdist_t opdis, VALUE target,
 		opdis_insn_t * insn;
 
 		if ( tgt.abfd ) {
-			// not impl!
-			//opdis_disasm_insn( opdis, tgt.abfd, vma, nsn );
+			opdis_disasm_bfd_insn( opdis, tgt.abfd, vma, nsn );
 		} else {
 			opdis_disasm_insn( opdis, tgt.buf, vma, insn );
 		}
+
+		// TODO display insn
 
 	/* Linear disassembly */
 	} else if (! strcmp( strategy, DIS_STRAT_LINEAR ) ) {
@@ -792,16 +632,20 @@ static void perform_disassembly( VALUE instance, opdist_t opdis, VALUE target,
 /* Disassembler strategies produce blocks */
 static VALUE cls_disasm_disassemble(VALUE instance, VALUE tgt, VALUE hash ) {
 	VALUE output;
-	opdist_t opdis;
+	opdist_t opdis, orig_opdis;
 
-	// TODO:  opdis_dupe in order to be threadsafe
-	Data_Get_Struct(instance, opdis_t, opdis);
+	/* Create duplicate opdis_t in order to be threadsafe */
+	Data_Get_Struct(instance, opdis_t, opdis_orig);
+	opdis = opdis_dupe(opdis_orig);
 
-	/* yielding is easy */
+	/* yielding to a block is easy */
 	if ( rb_block_given_p() ) {
-		// TODO: should errors raise an exception?
+		// TODO: should errors raise an exception? Make an option.
+
 		opdis_set_display(opdis, local_block_display, rb_block_proc());
-		return perform_disassembly( instance, opdis, tgt, hash );
+		output = perform_disassembly( instance, opdis, tgt, hash );
+		opdis_term(opdis);
+		return output;
 	}
 
 	/* ...otherwise we have to fill an output object */
@@ -812,6 +656,8 @@ static VALUE cls_disasm_disassemble(VALUE instance, VALUE tgt, VALUE hash ) {
 				  rb_iv_get( output, IVAR(OUT_ATTR_ERRORS) ) );
 
 	perform_disassembly( instance, opdis, tgt, hash );
+
+	opdis_term(opdis);
 
 	return output;
 }
@@ -914,18 +760,19 @@ static void init_disasm_class( VALUE modOpdis ) {
 
 static VALUE modOpdis;
 void Init_Opdis() {
+	symToSym = rb_intern("to_sym");
+	symCall = rb_intern("call");
+	symRead = rb_intern("read");
+	symAppend = rb_intern("<<");
+	symSize = rb_intern("size");
+
 	modOpdis = rb_define_module("Opdis");
 
 	init_disasm_class(modOpdis);
 	init_tgt_class(modOpdis);
-	init_bfddis_class(modOpdis);
 	init_output_class(modOpdis);
-	init_resolver_class(modOpdis);
-	init_handler_class(modOpdis);
-	init_decoder_class(modOpdis);
-	init_insn_class(modOpdis);
-	init_op_class(modOpdis);
-	init_absaddr_class(modOpdis);
-	init_addrexp_class(modOpdis);
-	init_reg_class(modOpdis);
+
+	Opdis_initCallbacks(modOpdis);
+
+	Opdis_initModel(modOpdis);
 }
