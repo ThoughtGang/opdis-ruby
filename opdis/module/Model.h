@@ -8,7 +8,7 @@
 #ifndef OPDIS_RB_MODEL_H
 #define OPDIS_RB_MODEL_H
 
-#include <opdis.h>
+#include <opdis/opdis.h>
 #include <ruby.h>
 
 /* Instruction Class */

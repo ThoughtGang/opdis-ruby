@@ -17,7 +17,7 @@
  */
 #include <ruby.h>
 
-#include <opdis.h>
+#include <opdis/opdis.h>
 
 #include "Opdis.h"
 #include "Callbacks.h"

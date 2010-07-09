@@ -5,9 +5,12 @@
  * See http://www.gnu.org/licenses/gpl.txt for details.
  */
 
+//  void rb_define_private_method(VALUE klass, const char *name, VALUE
+//  (*func)(), int argc)
+//
 #include <ruby.h>
 
-#include <model.h>
+#include <opdis/model.h>
 
 #include "Model.h"
 
