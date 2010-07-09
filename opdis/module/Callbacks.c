@@ -32,9 +32,8 @@ static VALUE str_to_sym( const char * str ) {
 /* ---------------------------------------------------------------------- */
 /* Decoder Class */
 
-// TODO: invoke this from somewhere!
-static const char * insn_type_to_str( enum dis_insn_type t ) {
-	const char *s;
+static VALUE insn_type_to_str( enum dis_insn_type t ) {
+	const char *s = "Unknown";
 	switch (t) {
 		case dis_noninsn: s = "Invalid"; break;
 		case dis_nonbranch: s = "Not branch"; break;
@@ -45,11 +44,10 @@ static const char * insn_type_to_str( enum dis_insn_type t ) {
 		case dis_dref: s = "Data reference"; break;
 		case dis_dref2: s = "Two data references"; break;
 	}
-	return s;
+	return rb_str_new_cstr(s);
 }
 
-// TODO: where is this invoked from?
-static void fill_decoder_hash( VALUE * hash, const opdis_insn_buf_t in, 
+static void fill_decoder_hash( VALUE hash, const opdis_insn_buf_t in, 
                                const opdis_byte_t * buf, opdis_off_t offset,
                                opdis_vma_t vma, opdis_off_t length ) {
 	int i;
@@ -57,12 +55,12 @@ static void fill_decoder_hash( VALUE * hash, const opdis_insn_buf_t in,
 	char info = in->insn_info_valid;
 
 	/* instruction location and size */
-	rb_hash_aset( *hash, str_to_sym(DECODER_MEMBER_VMA), INT2NUM(vma) );
-	rb_hash_aset( *hash, str_to_sym(DECODER_MEMBER_OFF), INT2NUM(offset) );
-	rb_hash_aset( *hash, str_to_sym(DECODER_MEMBER_LEN), INT2NUM(length) );
+	rb_hash_aset( hash, str_to_sym(DECODER_MEMBER_VMA), INT2NUM(vma) );
+	rb_hash_aset( hash, str_to_sym(DECODER_MEMBER_OFF), INT2NUM(offset) );
+	rb_hash_aset( hash, str_to_sym(DECODER_MEMBER_LEN), INT2NUM(length) );
 
 	/* target buffer */
-	rb_hash_aset( *hash, str_to_sym(DECODER_MEMBER_BUF), 
+	rb_hash_aset( hash, str_to_sym(DECODER_MEMBER_BUF), 
 		      rb_str_new( (const char *) buf, offset + length ) );
 	
 	/* decode instruction as provided by libopcodes */
@@ -72,28 +70,23 @@ static void fill_decoder_hash( VALUE * hash, const opdis_insn_buf_t in,
 	for ( i = 0; i < in->item_count; i++ ) {
 		rb_ary_push( ary, rb_str_new_cstr(in->items[i]) );
 	}
-	rb_hash_aset( *hash, str_to_sym(DECODER_MEMBER_ITEMS), ary );
+	rb_hash_aset( hash, str_to_sym(DECODER_MEMBER_ITEMS), ary );
 
 	/* 2. get raw ASCII version of insn from libopcodes */
-	rb_hash_aset( *hash, str_to_sym(DECODER_MEMBER_STR), 
+	rb_hash_aset( hash, str_to_sym(DECODER_MEMBER_STR), 
 		      rb_str_new_cstr(in->string) );
 
 	/* 3. get instruction metadata set by libopcodes */
-	rb_hash_aset( *hash, str_to_sym(DECODER_MEMBER_DELAY), 
+	rb_hash_aset( hash, str_to_sym(DECODER_MEMBER_DELAY), 
 		      info ? INT2NUM(in->branch_delay_insns) : Qnil);
-	rb_hash_aset( *hash, str_to_sym(DECODER_MEMBER_DATA), 
+	rb_hash_aset( hash, str_to_sym(DECODER_MEMBER_DATA), 
 		      info ? INT2NUM(in->data_size) : Qnil);
-	rb_hash_aset( *hash, str_to_sym(DECODER_MEMBER_TYPE), 
-		      info ? INT2NUM((int) in->insn_type) : Qnil);
-	rb_hash_aset( *hash, str_to_sym(DECODER_MEMBER_TGT), 
+	rb_hash_aset( hash, str_to_sym(DECODER_MEMBER_TYPE), 
+		      info ? insn_type_to_str(in->insn_type) : Qnil);
+	rb_hash_aset( hash, str_to_sym(DECODER_MEMBER_TGT), 
 		      info ? INT2NUM(in->target) : Qnil);
-	rb_hash_aset( *hash, str_to_sym(DECODER_MEMBER_TGT2), 
+	rb_hash_aset( hash, str_to_sym(DECODER_MEMBER_TGT2), 
 		      info ? INT2NUM(in->target2) : Qnil );
-
-	/* here we cheat and store insn_buf in hash in case one of the local
-	 * decoder base classes gets called */
-	// TODO
-	//instance = Data_Wrap_Struct(*hash, NULL, NULL, in);
 }
 
 static int invoke_builtin_decoder( OPDIS_DECODER fn, VALUE insn, VALUE hash ) {
@@ -134,7 +127,7 @@ static int invoke_builtin_decoder( OPDIS_DECODER fn, VALUE insn, VALUE hash ) {
 	rv = fn( inbuf, c_insn, buf, offset, vma, length, NULL );
 	if ( rv ) {
 		// TODO : error handler?
-		insnFillFromC( c_insn, insn );
+		Opdis_insnFillFromC( c_insn, insn );
 	}
 
 	opdis_insn_free(c_insn);
@@ -257,4 +250,13 @@ void Init_Opdis_initCallbacks( VALUE modOpdis ) {
 	init_x86decoder_class(modOpdis);
 }
 
+VALUE Opdis_decoderHash( const opdis_insn_buf_t in, 
+                         const opdis_byte_t * buf, opdis_off_t offset,
+                         opdis_vma_t vma, opdis_off_t length ) {
+	/* here we cheat and store insn_buf in hash in case one of the local
+	 * decoder base classes gets called */
+	VALUE hash = Data_Wrap_Struct(rb_cHash, NULL, NULL, in);
+	fill_decoder_hash( hash, in, buf, offset, vma, length );
+	return hash;
+}
 

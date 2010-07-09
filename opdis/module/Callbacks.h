@@ -33,4 +33,9 @@
 #define DECODER_MEMBER_TGT "target"
 #define DECODER_MEMBER_TGT2 "target2"
 
+/* Genererate a hash suitable for passing to a Ruby Decoder method */
+VALUE Opdis_decoderHash( const opdis_insn_buf_t in, 
+                         const opdis_byte_t * buf, opdis_off_t offset,
+                         opdis_vma_t vma, opdis_off_t length );
+
 #endif
