@@ -23,29 +23,34 @@
 #include "Callbacks.h"
 #include "Model.h"
 
-
 #define IVAR(attr) "@" attr
 #define SETTER(attr) attr "="
 
 static VALUE symToSym, symRead, symCall, symAppend, symSize;
+static VALUE symDecode, symVisited, symResolve;
+
+static VALUE clsDisasm, clsOutput;
+
+static VALUE modOpdis;
 
 static VALUE str_to_sym( const char * str ) {
 	VALUE var = rb_str_new_cstr(str);
-	return rb_funcall(var, symToSym, ));
+	return rb_funcall(var, symToSym, 0);
 }
 
 /* BFD Support (requires BFD gem) */
-static VALUE clsBfd = Qnil;
+static VALUE clsBfdTgt = Qnil;
 static VALUE clsBfdSec = Qnil;
 static VALUE clsBfdSym = Qnil;
-#define GET_BFD_CLASS(cls,name) (cls = cls == Qnil ? rb_path2class(name) : cls);
+
+#define GET_BFD_CLASS(cls,name) (cls = cls == Qnil ? rb_path2class(name) : cls)
+
+#define ALLOC_FIXED_INSN opdis_insn_alloc_fixed(128, 32, 16, 32)
 
 /* ---------------------------------------------------------------------- */
 /* Disasm Output Class */
 /* This is basically a Hash of VMA => Instruction entries, with an @errors
  * attribute that gets filled with error messages from the disassembler */
-
-static VALUE clsOutput;
 
 /* insn containing vma */
 static VALUE cls_output_contain( VALUE instance, VALUE vma ) {
@@ -56,7 +61,6 @@ static VALUE cls_output_contain( VALUE instance, VALUE vma ) {
 
 	/* iterate backwards from vma looking for insn containing vma */
 	for ( cont = 1; cont > 0 && addr >= min; addr -= 1 ) {
-		unsigned int size;
 		VALUE rb_size;
 		VALUE val = rb_hash_lookup2( instance, ULL2NUM(addr), Qfalse ); 
 
@@ -73,8 +77,8 @@ static VALUE cls_output_contain( VALUE instance, VALUE vma ) {
 		}
 
 		/* does insn contain (insn.size + addr) requested vma? */
-		rb_size = rb_funcall(val, IVAR(INSN_ATTR_SIZE), 0);
-		if ( rb_size == Qnil || addr + NUM2UNIT(rb_size) < orig ) {
+		rb_size = rb_funcall(val, rb_intern(IVAR(INSN_ATTR_SIZE)), 0);
+		if ( rb_size == Qnil || addr + NUM2UINT(rb_size) < orig ) {
 			/* nope - no insn contains requested vma */
 			cont = 0;
 		} else {
@@ -88,7 +92,7 @@ static VALUE cls_output_contain( VALUE instance, VALUE vma ) {
 
 static VALUE cls_output_new( VALUE class ) {
 	VALUE instance = rb_class_new(clsOutput);
-	rb_iv_set(instance, IVAR(OUT_ATTR_ERRORS), rb_arry_new() );
+	rb_iv_set(instance, IVAR(OUT_ATTR_ERRORS), rb_ary_new() );
 	return instance;
 }
 
@@ -109,7 +113,7 @@ static void init_output_class( VALUE modOpdis ) {
 struct arch_def { 
 	const char * name; 
 	enum bfd_architecture arch;	/* BFD CPU architecture */
-	unsigned long default_mach;	/* BFD machine type */
+	unsigned long mach;		/* (default) BFD machine type */
 	disassembler_ftype fn;		/* libopcodes print_insn callback */
 };
 
@@ -133,8 +137,6 @@ static struct arch_def arch_definitions[] = {
 
 /* ---------------------------------------------------------------------- */
 /* Disassembler Class */
-
-static VALUE clsDisasm;
 
 /* list all recognized syntaxes */
 static VALUE cls_disasm_syntaxes( VALUE class ) {
@@ -161,12 +163,12 @@ static VALUE cls_disasm_architectures( VALUE class ) {
 /* list all recognized disassembly algorithms */
 static VALUE cls_disasm_strategies( VALUE class ) {
 	VALUE ary = rb_ary_new();
-	rb_ary_push( rb_str_new_cstr(DIS_STRAT_SINGLE) );
-	rb_ary_push( rb_str_new_cstr(DIS_STRAT_LINEAR) );
-	rb_ary_push( rb_str_new_cstr(DIS_STRAT_CFLOW) );
-	rb_ary_push( rb_str_new_cstr(DIS_STRAT_SYMBOL) );
-	rb_ary_push( rb_str_new_cstr(DIS_STRAT_SECTION) );
-	rb_ary_push( rb_str_new_cstr(DIS_STRAT_ENTRY) );
+	rb_ary_push( ary, rb_str_new_cstr(DIS_STRAT_SINGLE) );
+	rb_ary_push( ary, rb_str_new_cstr(DIS_STRAT_LINEAR) );
+	rb_ary_push( ary, rb_str_new_cstr(DIS_STRAT_CFLOW) );
+	rb_ary_push( ary, rb_str_new_cstr(DIS_STRAT_SYMBOL) );
+	rb_ary_push( ary, rb_str_new_cstr(DIS_STRAT_SECTION) );
+	rb_ary_push( ary, rb_str_new_cstr(DIS_STRAT_ENTRY) );
 	return ary;
 }
 
@@ -175,21 +177,21 @@ static VALUE cls_disasm_strategies( VALUE class ) {
 static int local_decoder( const opdis_insn_buf_t in, opdis_insn_t * out,
                           const opdis_byte_t * buf, opdis_off_t offset,
                           opdis_vma_t vma, opdis_off_t length, void * arg ) {
-	VALUE obj = (VALUE) arg;
-	VALUE hash = rb_hash_new();
+	/* Build a hash containing the arguments passed to the decoder */
+	VALUE hash = Opdis_decoderHash( in, buf, offset, vma, length );
+	/* Create a Ruby Opdis::Instruction object based on the C object */
 	VALUE insn = Opdis_insnFromC(out);
-
-	/* build hash containing insn info */
-	fill_decoder_hash( &hash, in, buf, offset, vma, length );
+	VALUE obj = (VALUE) arg;
 
 	/* invoke decode method in Decoder object */
 	VALUE var = rb_funcall(obj, symDecode, 2, insn, hash);
+
 	return (Qfalse == var || Qnil == var) ? 0 : 1;
 }
 
 static VALUE cls_disasm_set_decoder(VALUE instance, VALUE obj) {
-	opdist_t  opdis;
-	Data_Get_Struct(instance, opdis_t, opdis);
+	opdis_t  opdis;
+	Data_Get_Struct(instance, opdis_info_t, opdis);
 
 	/* 'nil' causes opdis to revert to default decoder */
 	if ( Qnil == obj ) {
@@ -198,11 +200,11 @@ static VALUE cls_disasm_set_decoder(VALUE instance, VALUE obj) {
 	}
 
 	/* objects without a 'decode' method cannot be decoders */
-	if (! rb_respond_to(object, rb_intern(DECODER_METHOD)) ) {
+	if (! rb_respond_to(obj, rb_intern(DECODER_METHOD)) ) {
 		return Qfalse;
 	}
 	
-	opdis_set_decoder( opdis, local_decoder, obj );
+	opdis_set_decoder( opdis, local_decoder, (void *) obj );
 	rb_iv_set(instance, IVAR(DIS_ATTR_DECODER), obj );
 
 	return Qtrue;
@@ -222,8 +224,8 @@ static int local_handler( const opdis_insn_t * i, void * arg ) {
 }
 
 static VALUE cls_disasm_set_handler(VALUE instance, VALUE obj) {
-	opdist_t  opdis;
-	Data_Get_Struct(instance, opdis_t, opdis);
+	opdis_t  opdis;
+	Data_Get_Struct(instance, opdis_info_t, opdis);
 
 	/* nil causes opdis to revert to default decoder */
 	if ( Qnil == obj ) {
@@ -232,11 +234,11 @@ static VALUE cls_disasm_set_handler(VALUE instance, VALUE obj) {
 	}
 
 	/* objects without a visited? method cannot be handlers */
-	if (! rb_respond_to(object, rb_intern(HANDLER_METHOD)) ) {
+	if (! rb_respond_to(obj, rb_intern(HANDLER_METHOD)) ) {
 		return Qfalse;
 	}
 
-	opdis_set_handler( opdis, local_handler, obj );
+	opdis_set_handler( opdis, local_handler, (void *) obj );
 	rb_iv_set(instance, IVAR(DIS_ATTR_HANDLER), obj );
 
 	return Qtrue;
@@ -255,8 +257,8 @@ static opdis_vma_t local_resolver ( const opdis_insn_t * i, void * arg ) {
 }
 
 static VALUE cls_disasm_set_resolver(VALUE instance, VALUE obj) {
-	opdist_t  opdis;
-	Data_Get_Struct(instance, opdis_t, opdis);
+	opdis_t  opdis;
+	Data_Get_Struct(instance, opdis_info_t, opdis);
 
 	/* nil causes opdis to revert to default resolver */
 	if ( Qnil == obj ) {
@@ -265,34 +267,34 @@ static VALUE cls_disasm_set_resolver(VALUE instance, VALUE obj) {
 	}
 
 	/* objects without a resolve method cannot be Resolvers */
-	if (! rb_respond_to(object, rb_intern(RESOLVER_METHOD)) ) {
+	if (! rb_respond_to(obj, rb_intern(RESOLVER_METHOD)) ) {
 		return Qfalse;
 	}
 	
-	opdis_set_resolver( opdis, local_resolver, obj );
+	opdis_set_resolver( opdis, local_resolver, (void *) obj );
 	rb_iv_set(instance, IVAR(DIS_ATTR_RESOLVER), obj );
 
 	return Qtrue;
 }
 
 static VALUE cls_disasm_get_debug(VALUE instance) {
-	opdist_t  opdis;
-	Data_Get_Struct(instance, opdis_t, opdis);
+	opdis_t  opdis;
+	Data_Get_Struct(instance, opdis_info_t, opdis);
 	return opdis->debug ? Qtrue : Qfalse;
 }
 
 static VALUE cls_disasm_set_debug(VALUE instance, VALUE enabled) {
-	opdist_t  opdis;
-	Data_Get_Struct(instance, opdis_t, opdis);
+	opdis_t  opdis;
+	Data_Get_Struct(instance, opdis_info_t, opdis);
 	opdis->debug = (enabled == Qtrue) ? 1 : 0;
 	return Qtrue;
 }
 
 static VALUE cls_disasm_get_syntax(VALUE instance) {
-	opdist_t  opdis;
+	opdis_t  opdis;
 	VALUE str;
 
-	Data_Get_Struct(instance, opdis_t, opdis);
+	Data_Get_Struct(instance, opdis_info_t, opdis);
 
 	if ( opdis->disassembler == print_insn_i386_intel ) {
 		str = rb_str_new_cstr(DIS_SYNTAX_INTEL);
@@ -304,33 +306,34 @@ static VALUE cls_disasm_get_syntax(VALUE instance) {
 }
 
 static VALUE cls_disasm_set_syntax(VALUE instance, VALUE syntax) {
-	opdist_t  opdis;
+	opdis_t  opdis;
 	enum opdis_x86_syntax_t syn;
-	const char * str = StringValueCStr(rb_any_to_s(syntax));
+	VALUE syntax_s = rb_any_to_s(syntax);
+	const char * str = StringValueCStr(syntax_s);
 
-	if (! strcmp(syntax, DIS_SYNTAX_INTEL) ) {
+	if (! strcmp(str, DIS_SYNTAX_INTEL) ) {
 		syn = opdis_x86_syntax_intel;
-	} else if (! strcmp(syntax, DIS_SYNTAX_ATT) ) {
+	} else if (! strcmp(str, DIS_SYNTAX_ATT) ) {
 		syn = opdis_x86_syntax_att;
 	} else {
 		rb_raise(rb_eArgError, "Syntax must be 'intel' or 'att'");
 	}
 
-	Data_Get_Struct(instance, opdis_t, opdis);
+	Data_Get_Struct(instance, opdis_info_t, opdis);
 	opdis_set_x86_syntax(opdis, syn);
 
 	return Qtrue;
 }
 
 static VALUE cls_disasm_get_arch(VALUE instance) {
-	opdist_t  opdis;
+	opdis_t  opdis;
 	int i;
-	VALUE str;
+	int num_defs = sizeof(arch_definitions) / sizeof(struct arch_def);
 
-	Data_Get_Struct(instance, opdis_t, opdis);
+	Data_Get_Struct(instance, opdis_info_t, opdis);
 
 	for ( i = 0; i < num_defs; i++ ) {
-		struct disasm_def *def = &disasm_definitions[i];
+		struct arch_def *def = &arch_definitions[i];
 		if ( def->arch == opdis->config.arch &&
 		     def->mach == opdis->config.mach ) {
 			return rb_str_new_cstr(def->name);
@@ -341,25 +344,25 @@ static VALUE cls_disasm_get_arch(VALUE instance) {
 }
 
 static VALUE cls_disasm_set_arch(VALUE instance, VALUE arch) {
-	opdist_t  opdis;
+	opdis_t  opdis;
 	struct disassemble_info * info;
 	int i;
 	int num_defs = sizeof(arch_definitions) / sizeof(struct arch_def);
 	const char * name = rb_string_value_cstr(&arch);
 
-	Data_Get_Struct(instance, opdis_t, opdis);
+	Data_Get_Struct(instance, opdis_info_t, opdis);
 	info = &opdis->config;
 
-	info->application_data = def[0]->fn;	// no NULL pointers here, suh!
+	info->application_data = arch_definitions[0].fn;
 	info->arch = bfd_arch_unknown;
 	info->mach = 0;
 
 	for ( i = 0; i < num_defs; i++ ) {
-		struct disasm_def *def = &disasm_definitions[i];
+		struct arch_def *def = &arch_definitions[i];
 		if (! strcmp(name, def->name) ) {
 			info->application_data = def->fn;
 			info->arch = def->arch;
-			info->mach = def->default_mach;
+			info->mach = def->mach;
 			rb_iv_set(instance, IVAR(DIS_ATTR_ARCH), arch);
 			return Qtrue;
 		}
@@ -369,17 +372,18 @@ static VALUE cls_disasm_set_arch(VALUE instance, VALUE arch) {
 }
 
 static VALUE cls_disasm_get_opts(VALUE instance) {
-	opdist_t  opdis;
-	Data_Get_Struct(instance, opdis_t, opdis);
+	opdis_t  opdis;
+	Data_Get_Struct(instance, opdis_info_t, opdis);
 	return rb_str_new_cstr(opdis->config.disassembler_options);
 }
 
 static VALUE cls_disasm_set_opts(VALUE instance, VALUE opts) {
 	char * str;
-	opdist_t  opdis;
-	Data_Get_Struct(instance, opdis_t, opdis);
+	opdis_t  opdis;
+	VALUE opts_s = opts;
+	Data_Get_Struct(instance, opdis_info_t, opdis);
 
-	str = StringValueCStr(rb_any_to_s(opts));
+	str = StringValueCStr(opts_s);
 	opdis_set_disassembler_options( opdis, str );
 	return Qtrue;
 }
@@ -410,7 +414,7 @@ static void cls_disasm_handle_args( VALUE instance, VALUE hash ) {
 	if ( Qfalse != var ) cls_disasm_set_opts(instance, var);
 
 	var = rb_hash_lookup2(hash, str_to_sym(DIS_ARG_ARCH), Qfalse);
-	if ( Qfalse != var ) cls_disasm_set_arch(VALUE instance, VALUE arch);
+	if ( Qfalse != var ) cls_disasm_set_arch(instance, var);
 }
 
 /* local display handler for blocks: this yields the current insn to arg */
@@ -446,14 +450,13 @@ static void local_error( enum opdis_error_t error, const char * msg,
 		default: type = DIS_ERR_UNK; break;
 	}
 
-	snprintf( buf, 127-1, "%s: $s", type, msg );
-	str = rb_str_new_cstr(buf);
+	snprintf( buf, 127-1, "%s: %s", type, msg );
 
 	/* append error message to error list */
 	rb_funcall( errors, symAppend, 1, rb_str_new_cstr(buf) );
 }
 
-static void config_buf_from_args( opdis_buf_t * buf, VALUE hash ) {
+static void config_buf_from_args( opdis_buf_t buf, VALUE hash ) {
 	VALUE var;
 
 	/* buffer vma */
@@ -481,7 +484,7 @@ static opdis_buf_t opdis_buf_for_target( VALUE tgt, VALUE hash ) {
 		sbuf = alloca(buf_len);
 		for( i=0; i < buf_len; i++ ) {
 			VALUE val = rb_ary_entry( tgt, i );
-			sbuf[i] = (unsigned char *) NUM2UINT(val);
+			sbuf[i] = (unsigned char) NUM2UINT(val);
 		}
 
 		buf = sbuf;
@@ -504,36 +507,35 @@ static opdis_buf_t opdis_buf_for_target( VALUE tgt, VALUE hash ) {
 	opdis_buf_fill( obuf, 0, buf, buf_len );
 
 	/* apply target-specific args (vma, etc) */
-	config_buf_from_args( buf, hash );
+	config_buf_from_args( obuf, hash );
 
 	return obuf;
 }
 
-struct OPDIS_TGT { bfd * abfd; asection * sec; asymbol * sym; opdis_buf_t buf };
+struct OPDIS_TGT {bfd * abfd; asection * sec; asymbol * sym; opdis_buf_t buf;};
 
-static void load_target( opdist_t opdis, VALUE tgt, VALUE hash, 
+static void load_target( opdis_t opdis, VALUE tgt, VALUE hash, 
 			 struct OPDIS_TGT * out ) {
 
 	/* Ruby Bfd::Target object */
 	if ( Qnil != GET_BFD_CLASS(clsBfdTgt, BFD_TGT_PATH) &&
 	     Qtrue == rb_obj_is_kind_of( tgt, clsBfdTgt ) ) {
-		DataGetStruct(tgt, bfd, out->abfd );
+		Data_Get_Struct(tgt, bfd, out->abfd );
 	
 	/* Ruby Bfd::Symbol object */
 	} else if ( Qnil != GET_BFD_CLASS(clsBfdSym, BFD_SYM_PATH) &&
 	     Qtrue == rb_obj_is_kind_of( tgt, clsBfdSym ) ) {
-		asymbol * s;
-		DataGetStruct(tgt, asymbol, out->sym );
+		Data_Get_Struct(tgt, asymbol, out->sym );
 		if ( out->sym ) {
-			out->abfd = s->the_bfd;
+			out->abfd = out->sym->the_bfd;
 		}
 
 	/* Ruby Bfd::Section object */
 	} else if ( Qnil != GET_BFD_CLASS(clsBfdSec, BFD_SEC_PATH) &&
 	     Qtrue == rb_obj_is_kind_of( tgt, clsBfdSec ) ) {
-		DataGetStruct(tgt, asection, out->sec );
+		Data_Get_Struct(tgt, asection, out->sec );
 		if ( out->sec ) {
-			out->abfd = s->owner;
+			out->abfd = out->sec->owner;
 		}
 
 	/* Other non-Bfd Ruby object */
@@ -547,7 +549,7 @@ static void load_target( opdist_t opdis, VALUE tgt, VALUE hash,
 	}
 }
 
-static void perform_disassembly( VALUE instance, opdist_t opdis, VALUE target,
+static void perform_disassembly( VALUE instance, opdis_t opdis, VALUE target,
 				 VALUE hash ) {
 	VALUE var;
 	VALUE vma = rb_hash_lookup2(hash, str_to_sym(DIS_ARG_VMA), INT2NUM(0));
@@ -569,21 +571,23 @@ static void perform_disassembly( VALUE instance, opdist_t opdis, VALUE target,
 
 	/* Single instruction disassembly */
 	if (! strcmp( strategy, DIS_STRAT_SINGLE ) ) {
-		// TODO: alloc fixed insn
-		opdis_insn_t * insn;
+		opdis_insn_t * insn = ALLOC_FIXED_INSN;
 
 		if ( tgt.abfd ) {
-			opdis_disasm_bfd_insn( opdis, tgt.abfd, vma, nsn );
+			opdis_disasm_bfd_insn( opdis, tgt.abfd, vma, insn );
 		} else {
 			opdis_disasm_insn( opdis, tgt.buf, vma, insn );
 		}
 
-		// TODO display insn
+		/* invoke display function */
+		opdis->display( insn, opdis->display_arg );
+
+		opdis_insn_free(insn);
 
 	/* Linear disassembly */
 	} else if (! strcmp( strategy, DIS_STRAT_LINEAR ) ) {
 		if ( tgt.abfd ) {
-		 	opdis_disasm_bfd_linear( opdis, tgt.bfd, vma, len );
+		 	opdis_disasm_bfd_linear( opdis, tgt.abfd, vma, len );
 		} else {
 		 	opdis_disasm_linear( opdis, tgt.buf, vma, len );
 		}
@@ -632,28 +636,29 @@ static void perform_disassembly( VALUE instance, opdist_t opdis, VALUE target,
 /* Disassembler strategies produce blocks */
 static VALUE cls_disasm_disassemble(VALUE instance, VALUE tgt, VALUE hash ) {
 	VALUE output;
-	opdist_t opdis, orig_opdis;
+	opdis_t opdis, opdis_orig;
 
 	/* Create duplicate opdis_t in order to be threadsafe */
-	Data_Get_Struct(instance, opdis_t, opdis_orig);
+	Data_Get_Struct(instance, opdis_info_t, opdis_orig);
 	opdis = opdis_dupe(opdis_orig);
 
 	/* yielding to a block is easy */
 	if ( rb_block_given_p() ) {
 		// TODO: should errors raise an exception? Make an option.
 
-		opdis_set_display(opdis, local_block_display, rb_block_proc());
-		output = perform_disassembly( instance, opdis, tgt, hash );
+		opdis_set_display(opdis, local_block_display, 
+				(void *) rb_block_proc());
+		perform_disassembly( instance, opdis, tgt, hash );
 		opdis_term(opdis);
-		return output;
+		return Qtrue;
 	}
 
 	/* ...otherwise we have to fill an output object */
 	output = cls_output_new( clsOutput );
 
-	opdis_set_display( opdis, local_display, output );
+	opdis_set_display( opdis, local_display, (void *) output );
 	opdis_set_error_reporter( opdis, local_error, 
-				  rb_iv_get( output, IVAR(OUT_ATTR_ERRORS) ) );
+			(void *) rb_iv_get(output, IVAR(OUT_ATTR_ERRORS)) );
 
 	perform_disassembly( instance, opdis, tgt, hash );
 
@@ -664,9 +669,9 @@ static VALUE cls_disasm_disassemble(VALUE instance, VALUE tgt, VALUE hash ) {
 
 /* new: takes hash of arguments */
 static VALUE cls_disasm_new(VALUE class, VALUE hash) {
-	VALUE instance, var;
+	VALUE instance;
 	VALUE argv[1] = { Qnil };
-	opdist_t  opdis = opdis_init();
+	opdis_t opdis = opdis_init();
 
 	instance = Data_Wrap_Struct(class, NULL, opdis_term, opdis);
 	rb_obj_call_init(instance, 0, argv);
@@ -758,7 +763,6 @@ static void init_disasm_class( VALUE modOpdis ) {
 /* ---------------------------------------------------------------------- */
 /* Opdis Module */
 
-static VALUE modOpdis;
 void Init_Opdis() {
 	symToSym = rb_intern("to_sym");
 	symCall = rb_intern("call");
@@ -766,10 +770,13 @@ void Init_Opdis() {
 	symAppend = rb_intern("<<");
 	symSize = rb_intern("size");
 
+	symDecode = rb_intern(DECODER_METHOD);
+	symVisited = rb_intern(HANDLER_METHOD);
+	symResolve = rb_intern(RESOLVER_METHOD);
+
 	modOpdis = rb_define_module("Opdis");
 
 	init_disasm_class(modOpdis);
-	init_tgt_class(modOpdis);
 	init_output_class(modOpdis);
 
 	Opdis_initCallbacks(modOpdis);
