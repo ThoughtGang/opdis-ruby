@@ -1204,7 +1204,7 @@ VALUE Opdis_insnFromC( opdis_insn_t * insn ) {
 	return (insn == NULL) ? Qnil : insn_from_c(insn);
 }
 
-int insnFillFromC( opdis_insn_t * insn, VALUE dest ) {
+int Opdis_insnFillFromC( opdis_insn_t * insn, VALUE dest ) {
 	if (insn == NULL || dest == Qnil) {
 		return 0;
 	}
