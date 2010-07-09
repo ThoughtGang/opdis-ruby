@@ -237,7 +237,7 @@ static void init_resolver_class( VALUE modOpdis ) {
 	rb_define_method(clsResolver, RESOLVER_METHOD, cls_resolver_resolve, 1);
 }
 
-void Init_Opdis_initCallbacks( VALUE modOpdis ) {
+void Opdis_initCallbacks( VALUE modOpdis ) {
 	symToSym = rb_intern("to_sym");
 
 	symDecode = rb_intern(DECODER_METHOD);
