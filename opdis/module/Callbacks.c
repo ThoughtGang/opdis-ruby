@@ -8,28 +8,47 @@
 #include <ruby.h>
 
 #include <opdis/opdis.h>
+#include <opdis/model.h>
+#include <opdis/x86_decoder.h>
 
+#include "Callbacks.h"
 #include "Opdis.h"
 #include "Model.h"
-
 
 #define IVAR(attr) "@" attr
 #define SETTER(attr) attr "="
 
-static VALUE symDecode, symVisited, symResolve;
+static VALUE symToSym, symDecode, symVisited, symResolve;
+static VALUE clsDecoder, clsX86Decoder, clsX86IntelDecoder;
+static VALUE clsHandler, clsResolver;
 
 static VALUE str_to_sym( const char * str ) {
 	VALUE var = rb_str_new_cstr(str);
-	return rb_funcall(var, symToSym, ));
+	return rb_funcall(var, symToSym, 0);
 }
 
-#define ALLOC_FIXED_INSN opdis_alloc_fixed(128, 32, 16, 32)
+#define ALLOC_FIXED_INSN opdis_insn_alloc_fixed(128, 32, 16, 32)
 
 /* ---------------------------------------------------------------------- */
 /* Decoder Class */
 
-static VALUE clsDecoder;
+// TODO: invoke this from somewhere!
+static const char * insn_type_to_str( enum dis_insn_type t ) {
+	const char *s;
+	switch (t) {
+		case dis_noninsn: s = "Invalid"; break;
+		case dis_nonbranch: s = "Not branch"; break;
+		case dis_branch: s = "Unconditional branch"; break;
+		case dis_condbranch: s = "Conditional branch"; break;
+		case dis_jsr: s = "Jump to subroutine"; break;
+		case dis_condjsr: s = "Conditional jump to subroutine"; break;
+		case dis_dref: s = "Data reference"; break;
+		case dis_dref2: s = "Two data references"; break;
+	}
+	return s;
+}
 
+// TODO: where is this invoked from?
 static void fill_decoder_hash( VALUE * hash, const opdis_insn_buf_t in, 
                                const opdis_byte_t * buf, opdis_off_t offset,
                                opdis_vma_t vma, opdis_off_t length ) {
@@ -38,12 +57,12 @@ static void fill_decoder_hash( VALUE * hash, const opdis_insn_buf_t in,
 	char info = in->insn_info_valid;
 
 	/* instruction location and size */
-	rb_hash_aset( *hash, str_to_sym(DECODE_MEMBER_VMA), INT2NUM(vma) );
-	rb_hash_aset( *hash, str_to_sym(DECODE_MEMBER_OFF), INT2NUM(offset) );
-	rb_hash_aset( *hash, str_to_sym(DECODE_MEMBER_LEN), INT2NUM(length) );
+	rb_hash_aset( *hash, str_to_sym(DECODER_MEMBER_VMA), INT2NUM(vma) );
+	rb_hash_aset( *hash, str_to_sym(DECODER_MEMBER_OFF), INT2NUM(offset) );
+	rb_hash_aset( *hash, str_to_sym(DECODER_MEMBER_LEN), INT2NUM(length) );
 
 	/* target buffer */
-	rb_hash_aset( *hash, str_to_sym(DECODE_MEMBER_BUF), 
+	rb_hash_aset( *hash, str_to_sym(DECODER_MEMBER_BUF), 
 		      rb_str_new( (const char *) buf, offset + length ) );
 	
 	/* decode instruction as provided by libopcodes */
@@ -53,41 +72,44 @@ static void fill_decoder_hash( VALUE * hash, const opdis_insn_buf_t in,
 	for ( i = 0; i < in->item_count; i++ ) {
 		rb_ary_push( ary, rb_str_new_cstr(in->items[i]) );
 	}
-	rb_hash_aset( *hash, str_to_sym(DECODE_MEMBER_ITEMS), ary );
+	rb_hash_aset( *hash, str_to_sym(DECODER_MEMBER_ITEMS), ary );
 
 	/* 2. get raw ASCII version of insn from libopcodes */
-	rb_hash_aset( *hash, str_to_sym(DECODE_MEMBER_STR), 
+	rb_hash_aset( *hash, str_to_sym(DECODER_MEMBER_STR), 
 		      rb_str_new_cstr(in->string) );
 
 	/* 3. get instruction metadata set by libopcodes */
-	rb_hash_aset( *hash, str_to_sym(DECODE_MEMBER_DELAY), 
+	rb_hash_aset( *hash, str_to_sym(DECODER_MEMBER_DELAY), 
 		      info ? INT2NUM(in->branch_delay_insns) : Qnil);
-	rb_hash_aset( *hash, str_to_sym(DECODE_MEMBER_DATA), 
+	rb_hash_aset( *hash, str_to_sym(DECODER_MEMBER_DATA), 
 		      info ? INT2NUM(in->data_size) : Qnil);
-	rb_hash_aset( *hash, str_to_sym(DECODE_MEMBER_TYPE), 
+	rb_hash_aset( *hash, str_to_sym(DECODER_MEMBER_TYPE), 
 		      info ? INT2NUM((int) in->insn_type) : Qnil);
-	rb_hash_aset( *hash, str_to_sym(DECODE_MEMBER_TGT), 
+	rb_hash_aset( *hash, str_to_sym(DECODER_MEMBER_TGT), 
 		      info ? INT2NUM(in->target) : Qnil);
-	rb_hash_aset( *hash, str_to_sym(DECODE_MEMBER_TGT2), 
+	rb_hash_aset( *hash, str_to_sym(DECODER_MEMBER_TGT2), 
 		      info ? INT2NUM(in->target2) : Qnil );
 
 	/* here we cheat and store insn_buf in hash in case one of the local
 	 * decoder base classes gets called */
-	instance = Data_Wrap_Struct(*hash, NULL, NULL, in);
+	// TODO
+	//instance = Data_Wrap_Struct(*hash, NULL, NULL, in);
 }
 
 static int invoke_builtin_decoder( OPDIS_DECODER fn, VALUE insn, VALUE hash ) {
+	int rv;
+	VALUE var;
 	opdis_insn_buf_t inbuf;
         opdis_byte_t * buf;
 	opdis_off_t offset;
         opdis_vma_t vma;
 	opdis_off_t length;
-	opdis_insn_t * c_insn = ALLOC_FIXED_INSN();
+	opdis_insn_t * c_insn = ALLOC_FIXED_INSN;
 
 	Opdis_insnToC( insn, c_insn );
 
 	/* get insn_buf_t from decoder instance; this saves some trouble */
-	Data_Get_Struct( hash, opdis_insn_buf_t, inbuf );
+	Data_Get_Struct( hash, opdis_insn_buffer_t, inbuf );
 	if (! inbuf ) {
 		/* something went wrong: we weren't called from local_decoder */
 		rb_raise( rb_eRuntimeError, "opdis_insn_buf_t not found" );
@@ -104,12 +126,15 @@ static int invoke_builtin_decoder( OPDIS_DECODER fn, VALUE insn, VALUE hash ) {
 	length = ( Qfalse != var ) ? NUM2UINT(var) : 0;
 
 	var = rb_hash_lookup2(hash, str_to_sym(DECODER_MEMBER_BUF), Qfalse);
-	buf = ( Qfalse != var ) ? RSTRING_PTR(buf) : Qnil;
+	buf = ( Qfalse != var ) ? (opdis_byte_t *) RSTRING_PTR(buf) : NULL;
+	// TODO: error message or exception on NULL
 
 	/* invoke C decoder callback */
-	rv = fn( inbuf, c_insn, buf, offset, vma, length );
+	// TODO: pass something meaningful in arg
+	rv = fn( inbuf, c_insn, buf, offset, vma, length, NULL );
 	if ( rv ) {
-		fill_ruby_insn( c_insn, insn );
+		// TODO : error handler?
+		insnFillFromC( c_insn, insn );
 	}
 
 	opdis_insn_free(c_insn);
@@ -131,8 +156,6 @@ static void init_decoder_class( VALUE modOpdis ) {
 
 /*      ----------------------------------------------------------------- */
 /* 	X86 Decoder Class */
-
-static VALUE clsX86Decoder, clsX86IntelDecoder;
 
 static VALUE cls_x86decoder_decode( VALUE instance, VALUE insn, VALUE hash ) {
 	rb_thread_schedule();
@@ -162,17 +185,14 @@ static void init_x86decoder_class( VALUE modOpdis ) {
 /* ---------------------------------------------------------------------- */
 /* VisitedAddr Class */
 
-/* Handler class determines whether to continue ? */
-static VALUE clsHandler;
-
 static VALUE cls_handler_visited( VALUE instance, VALUE insn ) {
 	int rv;
-	opdist_t opdis;
-	opdis_insn_t * c_insn = ALLOC_FIXED_INSN();
+	opdis_t opdis;
+	opdis_insn_t * c_insn = ALLOC_FIXED_INSN;
 
 	Opdis_insnToC( insn, c_insn );
 
-	Data_Get_Struct(instance, opdis_t, opdis);
+	Data_Get_Struct(instance, opdis_info_t, opdis);
 	if (! opdis ) {
 		rb_raise(rb_eRuntimeError, "opdis_t not found in Handler");
 	}
@@ -186,13 +206,13 @@ static VALUE cls_handler_visited( VALUE instance, VALUE insn ) {
 /* NOTE: this uses its own opdis_t with a visited_addr tree */
 static VALUE cls_handler_new( VALUE class ) {
 	VALUE argv[1] = {Qnil};
-	opdist_t opdis = opdis_init();
-	instance = Data_Wrap_Struct(class, NULL, opdis_term, opdis);
+	opdis_t opdis = opdis_init();
+	VALUE instance = Data_Wrap_Struct(class, NULL, opdis_term, opdis);
 	rb_obj_call_init(instance, 0, argv);
 
 	opdis->visited_addr = opdis_vma_tree_init();
 
-	return init;
+	return instance;
 }
 
 static void init_handler_class( VALUE modOpdis ) {
@@ -206,11 +226,9 @@ static void init_handler_class( VALUE modOpdis ) {
 /* ---------------------------------------------------------------------- */
 /* Resolver Class */
 
-static VALUE clsResolver;
-
 static VALUE cls_resolver_resolve( VALUE instance, VALUE insn ) {
 	int rv;
-	opdis_insn_t * c_insn = ALLOC_FIXED_INSN();
+	opdis_insn_t * c_insn = ALLOC_FIXED_INSN;
 
 	Opdis_insnToC( insn, c_insn );
 
@@ -221,11 +239,14 @@ static VALUE cls_resolver_resolve( VALUE instance, VALUE insn ) {
 }
 
 static void init_resolver_class( VALUE modOpdis ) {
-	cls = rb_define_class_under(modOpdis, "AddressResolver", rb_cObject);
+	clsResolver = rb_define_class_under(modOpdis, "AddressResolver", 
+					    rb_cObject);
 	rb_define_method(clsResolver, RESOLVER_METHOD, cls_resolver_resolve, 1);
 }
 
 void Init_Opdis_initCallbacks( VALUE modOpdis ) {
+	symToSym = rb_intern("to_sym");
+
 	symDecode = rb_intern(DECODER_METHOD);
 	symVisited = rb_intern(HANDLER_METHOD);
 	symResolve = rb_intern(RESOLVER_METHOD); 
@@ -233,5 +254,7 @@ void Init_Opdis_initCallbacks( VALUE modOpdis ) {
 	init_resolver_class(modOpdis);
 	init_handler_class(modOpdis);
 	init_decoder_class(modOpdis);
+	init_x86decoder_class(modOpdis);
 }
+
 
