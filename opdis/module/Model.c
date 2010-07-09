@@ -882,7 +882,7 @@ static void set_insn_status( VALUE instance, enum opdis_insn_decode_t val ) {
 	}
 }
 
-static void fill_ruby_insn( opdis_insn_t * insn, VALUE dest ) {
+static void fill_ruby_insn( const opdis_insn_t * insn, VALUE dest ) {
 	int i;
 	char buf[128];
 	VALUE ops = rb_iv_get(dest, IVAR(INSN_ATTR_OPERANDS) );
@@ -926,7 +926,7 @@ static void fill_ruby_insn( opdis_insn_t * insn, VALUE dest ) {
 	}
 }
 
-static VALUE insn_from_c( opdis_insn_t * insn ) {
+static VALUE insn_from_c( const opdis_insn_t * insn ) {
 	VALUE var = rb_class_new(clsInsn);
 	fill_ruby_insn( insn, var );
 	return var;
@@ -1200,11 +1200,11 @@ void Opdis_initModel( VALUE modOpdis ) {
         init_reg_class(modOpdis);
 }
 
-VALUE Opdis_insnFromC( opdis_insn_t * insn ) {
+VALUE Opdis_insnFromC( const opdis_insn_t * insn ) {
 	return (insn == NULL) ? Qnil : insn_from_c(insn);
 }
 
-int Opdis_insnFillFromC( opdis_insn_t * insn, VALUE dest ) {
+int Opdis_insnFillFromC( const opdis_insn_t * insn, VALUE dest ) {
 	if (insn == NULL || dest == Qnil) {
 		return 0;
 	}

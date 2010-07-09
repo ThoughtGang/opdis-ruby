@@ -226,7 +226,14 @@
 #define REG_FLAG_RET "return"
 
 void Opdis_initModel( VALUE modOpdis );
-VALUE Opdis_insnFromC( opdis_insn_t * insn );
+
+/* Allocate and fill a Ruby Opdis::Instruction object from an opdis_insn_t */
+VALUE Opdis_insnFromC( const opdis_insn_t * insn );
+
+/* Fill a Ruby Opdis::Instruction object from an opdis_insn_t */
+int Opdis_insnFillFromC( const opdis_insn_t * insn, VALUE dest );
+
+/* Fill an opdis_insn_t from a Ruby Opdis::Instruction object */
 int Opdis_insnToC( VALUE insn, opdis_insn_t * c_insn );
 
 #endif
