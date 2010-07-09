@@ -15,15 +15,18 @@
 #include "Model.h"
 
 static VALUE symToSym, symToS;
+static VALUE clsInsn, clsOp, clsReg, clsAbsAddr;
+static VALUE clsRegOp, clsAbsAddrOp, clsAddrExprOp, clsImmOp;
 
 #define IVAR(attr) "@" attr
 #define SETTER(attr) attr "="
 
+/* TODO: remove if not needed 
 static VALUE str_to_sym( const char * str ) {
 	VALUE var = rb_str_new_cstr(str);
 	return rb_funcall(var, symToSym, 0);
 }
-
+*/
 
 #define ALLOC_FIXED_INSN opdis_alloc_fixed(128, 32, 16, 32)
 
@@ -39,8 +42,6 @@ static VALUE cls_generic_to_s( VALUE instance ) {
 
 /* ---------------------------------------------------------------------- */
 /* Operand Base Class */
-
-static VALUE clsOp;
 
 static VALUE cls_op_init(VALUE instance, VALUE hash) {
 	rb_iv_set(instance, IVAR(INSN_ATTR_FLAGS), rb_ary_new() );
@@ -73,8 +74,6 @@ static void init_op_class( VALUE modOpdis ) {
 
 /* ---------------------------------------------------------------------- */
 /* Register Class */
-
-static VALUE clsReg;
 
 static void set_ruby_reg_flags( VALUE instance, enum opdis_reg_flag_t val ) {
 	VALUE flags = rb_iv_get(instance, IVAR(REG_ATTR_FLAGS) );
@@ -210,8 +209,6 @@ static void reg_to_c( VALUE reg, opdis_reg_t * dest ) {
 /* ---------------------------------------------------------------------- */
 /* Register Operand */
 
-static VALUE clsRegOp;
-
 static VALUE reg_op_from_c( opdis_reg_t * reg ) {
 	VALUE var = rb_class_new(clsRegOp);
 	fill_ruby_reg(reg, var);
@@ -289,8 +286,6 @@ static void init_reg_class( VALUE modOpdis ) {
 /* ---------------------------------------------------------------------- */
 /* Absolute Address Operand Class */
 
-static VALUE clsAbsAddr;
-
 static void fill_ruby_absaddr( opdis_abs_addr_t * addr, VALUE dest ) {
 	rb_iv_set(dest, IVAR(ABS_ADDR_ATTR_SEG), reg_from_c(&addr->segment) );
 	rb_iv_set(dest, IVAR(ABS_ADDR_ATTR_OFF), addr->offset );
@@ -309,8 +304,6 @@ static void absaddr_to_c( VALUE addr, opdis_abs_addr_t * dest ) {
  
 /* ---------------------------------------------------------------------- */
 /* Absolute Address Operand */
-
-static VALUE clsAbsAddrOp;
 
 static VALUE absaddr_op_from_c( opdis_abs_addr_t * addr ) {
 	VALUE var = rb_class_new(clsAbsAddrOp);
@@ -357,8 +350,6 @@ static void init_absaddr_class( VALUE modOpdis ) {
 
 /* ---------------------------------------------------------------------- */
 /* Address Expression Class */
-
-static VALUE clsAddrExprOp;
 
 static enum opdis_addr_expr_shift_t get_expr_shift( const char * str ) {
 	if (! strcmp( ADDR_EXP_SHIFT_LSL, str ) ) {
@@ -418,7 +409,7 @@ static void fill_ruby_addrexpr( opdis_addr_expr_t * expr, VALUE dest ) {
 		   rb_str_new_cstr(get_expr_shift_str(expr->shift)) );
 }
 
-static VALUE addrexpr_from_c( opdis_addr_expr_t * expr ) {
+static VALUE addrexpr_op_from_c( opdis_addr_expr_t * expr ) {
 	VALUE var = rb_class_new(clsAddrExprOp);
 	fill_ruby_addrexpr( expr, var );
 	return var;
@@ -547,8 +538,6 @@ static void init_addrexpr_class( VALUE modOpdis ) {
 /* ---------------------------------------------------------------------- */
 /* Immediate Operand */
 
-static VALUE clsImmOp;
-
 static VALUE cls_imm_to_s(VALUE instance) {
 	return rb_any_to_s(rb_iv_get(instance, IVAR(IMM_ATTR_VAL)));
 }
@@ -557,7 +546,7 @@ static uint64_t imm_to_c( VALUE imm ) {
 	return NUM2ULL(rb_iv_get(imm, IVAR(IMM_ATTR_UNSIGNED)));
 }
 
-static VALUE imm_from_c( opdis_op_t * op ) {
+static VALUE imm_op_from_c( opdis_op_t * op ) {
 	VALUE var = rb_class_new(clsImmOp);
 
 	rb_iv_set(var, IVAR(IMM_ATTR_VMA), op->value.immediate.vma );
@@ -661,13 +650,13 @@ static VALUE op_from_c( opdis_op_t * op ) {
 	VALUE dest;
 	switch (op->category) {
 		case opdis_op_cat_register:
-			dest = reg_from_c(&op->value.reg); break;
+			dest = reg_op_from_c(&op->value.reg); break;
 		case opdis_op_cat_immediate:
-			dest = imm_from_c(op); break;
+			dest = imm_op_from_c(op); break;
 		case opdis_op_cat_absolute:
-			dest = absaddr_from_c(&op->value.abs); break;
+			dest = absaddr_op_from_c(&op->value.abs); break;
 		case opdis_op_cat_expr:
-			dest = addrexpr_from_c(&op->value.expr); break;
+			dest = addrexpr_op_from_c(&op->value.expr); break;
 		case opdis_op_cat_unknown:
 			dest = rb_class_new(clsOp);
 		default: break;
@@ -683,23 +672,6 @@ static VALUE op_from_c( opdis_op_t * op ) {
 
 /* ---------------------------------------------------------------------- */
 /* Instruction Class */
-
-static VALUE clsInsn;
-
-static const char * insn_type_to_str( enum dis_insn_type t ) {
-	const char *s;
-	switch (t) {
-		case dis_noninsn: s = "Invalid"; break;
-		case dis_nonbranch: s = "Not branch"; break;
-		case dis_branch: s = "Unconditional branch"; break;
-		case dis_condbranch: s = "Conditional branch"; break;
-		case dis_jsr: s = "Jump to subroutine"; break;
-		case dis_condjsr: s = "Conditional jump to subroutine"; break;
-		case dis_dref: s = "Data reference"; break;
-		case dis_dref2: s = "Two data references"; break;
-	}
-	return s;
-}
 
 static VALUE cls_insn_init(VALUE instance) {
 	rb_iv_set(instance, IVAR(INSN_ATTR_OPERANDS), rb_ary_new() );
@@ -923,7 +895,7 @@ static void fill_ruby_insn( opdis_insn_t * insn, VALUE dest ) {
 	rb_iv_set(dest, IVAR(INSN_ATTR_VMA), OFFT2NUM(insn->vma));
 	rb_iv_set(dest, IVAR(INSN_ATTR_SIZE), UINT2NUM(insn->size));
 	rb_iv_set(dest, IVAR(INSN_ATTR_BYTES), 
-		  rb_str_new(insn->bytes, insn->size ));
+		  rb_str_new((const char *) insn->bytes, insn->size ));
 
 	rb_iv_set(dest, IVAR(INSN_ATTR_PREFIXES), 
 		  rb_str_split(rb_str_new_cstr(insn->prefixes), " "));
@@ -1222,6 +1194,7 @@ void Opdis_initModel( VALUE modOpdis ) {
 
 	init_insn_class(modOpdis);
         init_op_class(modOpdis);
+        init_imm_class(modOpdis);
         init_absaddr_class(modOpdis);
         init_addrexpr_class(modOpdis);
         init_reg_class(modOpdis);
@@ -1229,6 +1202,15 @@ void Opdis_initModel( VALUE modOpdis ) {
 
 VALUE Opdis_insnFromC( opdis_insn_t * insn ) {
 	return (insn == NULL) ? Qnil : insn_from_c(insn);
+}
+
+int insnFillFromC( opdis_insn_t * insn, VALUE dest ) {
+	if (insn == NULL || dest == Qnil) {
+		return 0;
+	}
+					      
+	fill_ruby_insn(insn, dest);
+	return 1;
 }
 
 int Opdis_insnToC( VALUE insn, opdis_insn_t * c_insn ) {
