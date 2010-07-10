@@ -47,27 +47,28 @@
 #define DIS_ERR_MAX_NAME "ERROR_MAX_ITEMS"
 #define DIS_ERR_MAX "Max insn items error"
 #define DIS_ERR_UNK "Unknown error"
+
 #define DIS_STRAT_SINGLE_NAME "STRATEGY_SINGLE"
-#define DIS_STRAT_SINGLE "single"
+#define DIS_STRAT_SINGLE "single-instruction"
 #define DIS_STRAT_LINEAR_NAME "STRATEGY_LINEAR"
 #define DIS_STRAT_LINEAR "linear"
 #define DIS_STRAT_CFLOW_NAME "STRATEGY_CFLOW"
-#define DIS_STRAT_CFLOW "cflow"
+#define DIS_STRAT_CFLOW "control-flow"
 #define DIS_STRAT_SYMBOL_NAME "STRATEGY_SYMBOL"
-#define DIS_STRAT_SYMBOL "symbol"
+#define DIS_STRAT_SYMBOL "bfd-symbol"
 #define DIS_STRAT_SECTION_NAME "STRATEGY_SECTION"
-#define DIS_STRAT_SECTION "section"
+#define DIS_STRAT_SECTION "bfd-section"
 #define DIS_STRAT_ENTRY_NAME "STRATEGY_ENTRY"
-#define DIS_STRAT_ENTRY "entry"
+#define DIS_STRAT_ENTRY "bfd-entry"
 
-#define DIS_CONST_STRATEGIES "strategies"
+#define DIS_CONST_STRATEGIES "STRATEGIES"
 
 #define DIS_CONST_ARCHES "architectures"
 
 #define DIS_SYNTAX_ATT "att"
 #define DIS_SYNTAX_INTEL "intel"
 
-#define DIS_CONST_SYNTAXES "syntaxes"
+#define DIS_CONST_SYNTAXES "SYNTAXES"
 
 /* Output */
 

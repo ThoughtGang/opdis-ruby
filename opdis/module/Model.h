@@ -11,7 +11,11 @@
 #include <opdis/opdis.h>
 #include <ruby.h>
 
+#define GEN_ATTR_ASCII "ascii"
+
 /* Instruction Class */
+#define INSN_DECODE_INVALID_NAME "DECODE_INVALID"
+#define INSN_DECODE_INVALID "invalid"
 #define INSN_DECODE_BASIC_NAME "DECODE_BASIC"
 #define INSN_DECODE_BASIC "basic"
 #define INSN_DECODE_MNEM_NAME "DECODE_MNEMONIC"
@@ -41,19 +45,6 @@
 #define INSN_ATTR_TGT_IDX "tgt_idx" // private
 #define INSN_ATTR_DEST_IDX "dest_idx" // private
 #define INSN_ATTR_SRC_IDX "src_idx" // private
-
-#define INSN_STATUS_INVALID_NAME "INVALID"
-#define INSN_STATUS_INVALID "invalid"
-#define INSN_STATUS_BASIC_NAME "BASIC"
-#define INSN_STATUS_BASIC "basic"
-#define INSN_STATUS_MNEM_NAME "MNEMONIC"
-#define INSN_STATUS_MNEM "mnemonic"
-#define INSN_STATUS_OPS_NAME "OPERANDS"
-#define INSN_STATUS_OPS "operands"
-#define INSN_STATUS_MNEM_FLG_NAME "MNEMONIC_FLAGS"
-#define INSN_STATUS_MNEM_FLG "mnemonic flags"
-#define INSN_STATUS_OP_FLG_NAME "OPERAND_FLAGS"
-#define INSN_STATUS_OP_FLG "operand flags"
 
 #define INSN_ISA_GEN_NAME "ISA_GEN"
 #define INSN_ISA_GEN "general"
@@ -137,7 +128,7 @@
 /* Operand Base Class */
 
 #define OP_ATTR_FLAGS "flags"
-#define OP_ATTR_DATA_SZ "data_sz"
+#define OP_ATTR_DATA_SZ "data_size"
 
 #define OP_FLAG_R_NAME "FLG_READ"
 #define OP_FLAG_R "r"
@@ -148,11 +139,9 @@
 #define OP_FLAG_SIGNED_NAME "FLG_SIGNED"
 #define OP_FLAG_SIGNED "signed"
 #define OP_FLAG_ADDR_NAME "FLG_ADDR"
-#define OP_FLAG_ADDR "addr"
+#define OP_FLAG_ADDR "address"
 #define OP_FLAG_IND_NAME "FLG_INDIRECT"
-#define OP_FLAG_IND "indirect_addr"
-
-#define GEN_ATTR_ASCII "ascii"
+#define OP_FLAG_IND "indirect_address"
 
 /* Immediate Class */
 #define IMM_ATTR_VAL "value"
@@ -166,7 +155,7 @@
 #define ADDR_EXP_ATTR_SCALE "scale"
 #define ADDR_EXP_ATTR_INDEX "index"
 #define ADDR_EXP_ATTR_BASE "base"
-#define ADDR_EXP_ATTR_DISP "disp"
+#define ADDR_EXP_ATTR_DISP "displacement"
 
 #define ADDR_EXP_SHIFT_LSL_NAME "SHIFT_LSL"
 #define ADDR_EXP_SHIFT_LSL "lsl"
@@ -189,6 +178,7 @@
 #define REG_ATTR_FLAGS "flags"
 #define REG_ATTR_ID "id"
 #define REG_ATTR_SIZE "size"
+#define REG_ATTR_NAME "name"
 
 #define REG_FLAG_GEN_NAME "FLG_GEN"
 #define REG_FLAG_GEN "general purpose"
@@ -217,9 +207,9 @@
 #define REG_FLAG_Z_NAME "FLG_ZERO"
 #define REG_FLAG_Z "zero"
 #define REG_FLAG_IN_NAME "FLG_IN"
-#define REG_FLAG_IN "args_in"
+#define REG_FLAG_IN "args in"
 #define REG_FLAG_OUT_NAME "FLG_OUT"
-#define REG_FLAG_OUT "args_out"
+#define REG_FLAG_OUT "args out"
 #define REG_FLAG_LOCALS_NAME "FLG_LOCALS"
 #define REG_FLAG_LOCALS "locals"
 #define REG_FLAG_RET_NAME "FLG_RET"

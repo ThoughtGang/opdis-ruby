@@ -270,6 +270,7 @@ static void init_reg_class( VALUE modOpdis ) {
 
 	rb_define_method(clsReg, "initialize", cls_reg_init, 0);
 	rb_define_method(clsReg, "to_s", cls_generic_to_s, 0);
+	rb_define_alias(clsReg, REG_ATTR_NAME, GEN_ATTR_ASCII );
 
 	define_reg_constants( clsReg );
 	init_reg_attributes( clsRegOp );
@@ -278,6 +279,7 @@ static void init_reg_class( VALUE modOpdis ) {
 	clsRegOp = rb_define_class_under(modOpdis, "RegisterOperand", clsOp);
 	rb_define_method(clsRegOp, "initialize", cls_reg_init, 0);
 	rb_define_method(clsRegOp, "to_s", cls_generic_to_s, 0);
+	rb_define_alias(clsRegOp, REG_ATTR_NAME, GEN_ATTR_ASCII );
 
 	define_reg_constants( clsRegOp );
 	init_reg_attributes( clsRegOp );
@@ -842,16 +844,16 @@ static enum opdis_insn_decode_t insn_status_code( VALUE instance ) {
 
 	for ( i=0; i < RARRAY_LEN(ary); i++ ) {
 		VALUE val = RARRAY_PTR(ary)[i];
-		if (! strcmp(INSN_STATUS_BASIC, StringValueCStr(val)) ) {
+		if (! strcmp(INSN_DECODE_BASIC, StringValueCStr(val)) ) {
 			status |= opdis_decode_basic;
-		} else if (! strcmp(INSN_STATUS_MNEM, StringValueCStr(val)) ) {
+		} else if (! strcmp(INSN_DECODE_MNEM, StringValueCStr(val)) ) {
 			status |= opdis_decode_mnem;
-		} else if (! strcmp(INSN_STATUS_OPS, StringValueCStr(val)) ) {
+		} else if (! strcmp(INSN_DECODE_OPS, StringValueCStr(val)) ) {
 			status |= opdis_decode_ops;
-		} else if (! strcmp(INSN_STATUS_MNEM_FLG, 
+		} else if (! strcmp(INSN_DECODE_MNEMFLG, 
 				    StringValueCStr(val)) ) {
 			status |= opdis_decode_mnem_flags;
-		} else if (! strcmp(INSN_STATUS_OP_FLG, 
+		} else if (! strcmp(INSN_DECODE_OPFLG, 
 				    StringValueCStr(val)) ) {
 			status |= opdis_decode_op_flags;
 		}
@@ -863,22 +865,22 @@ static enum opdis_insn_decode_t insn_status_code( VALUE instance ) {
 static void set_insn_status( VALUE instance, enum opdis_insn_decode_t val ) {
 	VALUE status = rb_iv_get(instance, IVAR(INSN_ATTR_STATUS) );
 	if ( val & opdis_decode_invalid ) {
-		rb_ary_push(status, rb_str_new_cstr( INSN_STATUS_INVALID) );
+		rb_ary_push(status, rb_str_new_cstr( INSN_DECODE_INVALID) );
 	}
 	if ( val & opdis_decode_basic ) {
-		rb_ary_push(status, rb_str_new_cstr( INSN_STATUS_BASIC) );
+		rb_ary_push(status, rb_str_new_cstr( INSN_DECODE_BASIC) );
 	}
 	if ( val & opdis_decode_mnem ) {
-		rb_ary_push(status, rb_str_new_cstr( INSN_STATUS_MNEM) );
+		rb_ary_push(status, rb_str_new_cstr( INSN_DECODE_MNEM) );
 	}
 	if ( val & opdis_decode_ops ) {
-		rb_ary_push(status, rb_str_new_cstr( INSN_STATUS_OPS) );
+		rb_ary_push(status, rb_str_new_cstr( INSN_DECODE_OPS) );
 	}
 	if ( val & opdis_decode_mnem_flags ) {
-		rb_ary_push(status, rb_str_new_cstr( INSN_STATUS_MNEM_FLG) );
+		rb_ary_push(status, rb_str_new_cstr( INSN_DECODE_MNEMFLG) );
 	}
 	if ( val & opdis_decode_op_flags ) {
-		rb_ary_push(status, rb_str_new_cstr( INSN_STATUS_OP_FLG) );
+		rb_ary_push(status, rb_str_new_cstr( INSN_DECODE_OPFLG) );
 	}
 }
 
@@ -1050,18 +1052,18 @@ static VALUE cls_insn_fallthrough( VALUE instance ) {
 }
 
 static void define_insn_constants() {
-	rb_define_const(clsInsn, INSN_STATUS_INVALID_NAME,
-			rb_str_new_cstr(INSN_STATUS_INVALID));
-	rb_define_const(clsInsn, INSN_STATUS_BASIC_NAME,
-			rb_str_new_cstr(INSN_STATUS_BASIC));
-	rb_define_const(clsInsn, INSN_STATUS_MNEM_NAME,
-			rb_str_new_cstr(INSN_STATUS_MNEM));
-	rb_define_const(clsInsn, INSN_STATUS_OPS_NAME,
-			rb_str_new_cstr(INSN_STATUS_OPS));
-	rb_define_const(clsInsn, INSN_STATUS_MNEM_FLG_NAME,
-			rb_str_new_cstr(INSN_STATUS_MNEM_FLG));
-	rb_define_const(clsInsn, INSN_STATUS_OP_FLG_NAME,
-			rb_str_new_cstr(INSN_STATUS_OP_FLG));
+	rb_define_const(clsInsn, INSN_DECODE_INVALID_NAME,
+			rb_str_new_cstr(INSN_DECODE_INVALID));
+	rb_define_const(clsInsn, INSN_DECODE_BASIC_NAME,
+			rb_str_new_cstr(INSN_DECODE_BASIC));
+	rb_define_const(clsInsn, INSN_DECODE_MNEM_NAME,
+			rb_str_new_cstr(INSN_DECODE_MNEM));
+	rb_define_const(clsInsn, INSN_DECODE_OPS_NAME,
+			rb_str_new_cstr(INSN_DECODE_OPS));
+	rb_define_const(clsInsn, INSN_DECODE_MNEMFLG_NAME,
+			rb_str_new_cstr(INSN_DECODE_MNEMFLG));
+	rb_define_const(clsInsn, INSN_DECODE_OPFLG_NAME,
+			rb_str_new_cstr(INSN_DECODE_OPFLG));
 
 	rb_define_const(clsInsn, INSN_ISA_GEN_NAME,
 			rb_str_new_cstr(INSN_ISA_GEN));
