@@ -11,3 +11,11 @@ http://community.thoughtgang.org/content/opdis
 
 Git Repo
 http://github.com/mkfs/tg-community
+
+This project provides 3 ruby extensions:
+
+	* bfd : A barebones wrapper for the BFD object used by GNU binutils
+
+	* opcodes : A wrapper for the GNU binutils disassembler
+
+	* opdis : A wrapper for libopdis, a disassembler based on libopcodes
