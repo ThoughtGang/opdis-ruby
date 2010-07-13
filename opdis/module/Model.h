@@ -116,7 +116,7 @@
 #define INSN_FLAG_ROL "rotate left"
 #define INSN_FLAG_ROR_NAME "FLG_ROR"
 #define INSN_FLAG_ROR "rotate right"
-#define INSN_FLAG_RCL_NAME "FLG_RCR"
+#define INSN_FLAG_RCL_NAME "FLG_RCL"
 #define INSN_FLAG_RCL "rotate carry left"
 #define INSN_FLAG_RCR_NAME "FLG_RCR"
 #define INSN_FLAG_RCR "rotate carry right"

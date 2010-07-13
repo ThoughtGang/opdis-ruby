@@ -270,6 +270,7 @@ static void init_reg_class( VALUE modOpdis ) {
 
 	rb_define_method(clsReg, "initialize", cls_reg_init, 0);
 	rb_define_method(clsReg, "to_s", cls_generic_to_s, 0);
+	rb_define_attr(clsReg, GEN_ATTR_ASCII, 1, 0);
 	rb_define_alias(clsReg, REG_ATTR_NAME, GEN_ATTR_ASCII );
 
 	define_reg_constants( clsReg );
@@ -340,6 +341,7 @@ static void init_absaddr_class( VALUE modOpdis ) {
 	clsAbsAddr = rb_define_class_under(modOpdis, "AbsoluteAddress", 
 					   rb_cObject);
 	rb_define_method(clsAbsAddr, "to_s", cls_absaddr_to_s, 0);
+	rb_define_attr(clsAbsAddr, GEN_ATTR_ASCII, 1, 0);
 
 	init_abs_addr_attributes( clsAbsAddr );
 
