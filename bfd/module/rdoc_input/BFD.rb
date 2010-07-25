@@ -21,12 +21,15 @@ require 'BFD'
 t = Bfd::Target.new('/tmp/a.out', {})
 
 # Display architecture info
+
 puts t.arch_info.architecture
 
 # Display list of sections
+
 t.sections.each{ |name,sec| puts "%s at 0x%X" % [name, sec.vma] }
 
 # Display list of symbols
+
 t.symbols.each{ |name,sym| puts "%s : 0x%X" % [name, sym.value] }
 =end
 

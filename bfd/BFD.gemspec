@@ -3,7 +3,7 @@
 require 'rubygems'
 spec = Gem::Specification.new do |spec|
   spec.name = 'BFD'
-  spec.version = '1.0.1'
+  spec.version = '1.0.2'
   spec.summary = 'Ruby extension library providing an API to GNU BFD'
   spec.description = %{BFD is the Binary File Descriptor object used by
   GNU binutils. This extension provides a barebones BFD wrapper which 
