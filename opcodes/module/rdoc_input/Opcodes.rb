@@ -74,7 +74,7 @@ This returns a hash with the following members:
  vma:: Virtual Memory (Load) Address of the instruction. 
  size:: Size of the instruction in bytes.
  info:: Meta-info for the instruction, if available.
- insn:: String containing the disassembled instruction.
+ insn:: Array of strings returned from libopcodes.
 
 The <i>info</i> member is a hash with the following members:
 
@@ -94,7 +94,6 @@ Disassemble all instructions in a section.
 
 Returns an array of the hashes from disasm_insn.
 
-<b>NOTE:</b> Not currently implemented.
 =end
     def disasm_section( sec )
     end

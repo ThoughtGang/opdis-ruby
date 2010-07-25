@@ -442,9 +442,11 @@ static VALUE cls_disasm_dis(VALUE class, VALUE tgt, VALUE hash) {
 static VALUE cls_disasm_sec(VALUE class, VALUE sec) {
 	struct disassemble_info * info;
 	VALUE var;
+	// TODO: LLONG
+	unsigned int i, sec_size, sec_vma;
+	VALUE ary;
 
 	Data_Get_Struct(class, struct disassemble_info, info);
-// TODO: disassemble ( target ) <- takes block or returns all instructions
 	if ( Qtrue != rb_obj_is_kind_of( sec, 
 		      rb_path2class("Bfd::Section") ) ) {
 
@@ -453,14 +455,22 @@ static VALUE cls_disasm_sec(VALUE class, VALUE sec) {
 
 	var = rb_iv_get(class, IVAR(DIS_ATTR_OPTIONS));
 	info->disassembler_options = StringValueCStr( var );
+	sec_size = NUM2UINT(rb_iv_get(sec, IVAR("size")));
+	sec_vma = NUM2UINT(rb_iv_get(sec, IVAR("vma")));
+	info->buffer_vma = sec_vma;
+	// TODO: get contents
 
-	// TODO : from 0 to size, disasm
-	//return disasm_insn( info, vma );
-	//bfd * abfd;
-	/* nasty nasty! touching other peoples' privates! */
-	//Data_Get_Struct(var, bfd, abfd);
-	//info->application_data = disassembler(abfd);
-	return Qnil;
+	ary = rb_ary_new();
+
+	for ( i=0; i < sec_size; ) {
+		VALUE insn = disasm_insn( info, sec_vma + i );
+
+		rb_ary_push( ary, insn );
+
+		i += NUM2UINT(rb_hash_fetch(insn, str_to_sym(DIS_INSN_SIZE)));
+	}
+
+	return ary;
 }
 
 static VALUE cls_disasm_arch(VALUE class) {
@@ -507,7 +517,6 @@ static VALUE cls_disasm_new(VALUE class, VALUE hash) {
 
 	var = rb_hash_lookup(hash, str_to_sym(DIS_ARG_ARCH));
 	if ( var != Qnil) {
-		fprintf(stderr, "GOT ARCH ARG");
 		config_disasm_arch(info, var);
 	}
 
@@ -525,7 +534,6 @@ static void init_disasm_class( VALUE modOpcodes ) {
 	/* attributes */
 	rb_define_attr(clsDisasm, DIS_ATTR_OPTIONS, 1, 1);
 
-	// TODO: make 2nd option 0 by default
 	rb_define_method(clsDisasm, DIS_FN_DIS_INSN, cls_disasm_dis, 2);
 	rb_define_method(clsDisasm, DIS_FN_DIS_SEC, cls_disasm_sec, 1);
 }
