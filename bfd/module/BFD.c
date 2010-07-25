@@ -143,8 +143,8 @@ static VALUE section_new(bfd * abfd, asection *s) {
 	/* set instance variables */
 	rb_iv_set(instance, IVAR(SEC_ATTR_ID), INT2NUM(s->id) );
 	rb_iv_set(instance, IVAR(SEC_ATTR_NAME), rb_str_new_cstr(s->name) );
-	rb_iv_set(instance, IVAR(SEC_ATTR_INDEX), INT2NUM(s->id) );
-	rb_iv_set(instance, IVAR(SEC_ATTR_FLAGS), INT2NUM(s->id) );
+	rb_iv_set(instance, IVAR(SEC_ATTR_INDEX), INT2NUM(s->index) );
+	rb_iv_set(instance, IVAR(SEC_ATTR_FLAGS), INT2NUM(s->flags) );
 	rb_iv_set(instance, IVAR(SEC_ATTR_VMA), SIZET2NUM(s->vma) );
 	rb_iv_set(instance, IVAR(SEC_ATTR_LMA), SIZET2NUM(s->lma) );
 	rb_iv_set(instance, IVAR(SEC_ATTR_SIZE), SIZET2NUM(s->size) );
