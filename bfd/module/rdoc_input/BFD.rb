@@ -9,11 +9,11 @@
 Requires GNU binutils, available at
 http://www.gnu.org/software/binutils .
 
-Documentation for GNU binutils is available at
+Documentation for GNU BFD is available at
 http://sourceware.org/binutils/docs-2.20/bfd/index.html .
 
 All of the original BFD data structures and constants can be found in
-<b>bfd.h</b>, available on Linux installations in <b>/usr/include/bfd.h</b>.
+<b>bfd.h</b>, available on Linux installations at <b>/usr/include/bfd.h</b>.
 
 =Basic Usage
 require 'BFD'
