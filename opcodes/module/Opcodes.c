@@ -308,16 +308,14 @@ static VALUE clsDisasm;
 // TODO: better names
 #define DIS_FN_DIS_INSN "disasm_insn"
 #define DIS_FN_DIS_SEC "disasm_section"
-#define DIS_FN_DIS_INSN_INFO "last_insn_info"
 
 #define DIS_ARG_BFD "bfd"
 #define DIS_ARG_ARCH "arch"
-#define DIS_ARG_MACH "mach"
 #define DIS_ARG_OPTS "opts"
 #define DIS_ARG_VMA "vma"
 #define DIS_ARG_BUFVMA "buffer_vma"
 
-#define DIS_INSN_INFO_DELAY "branch_delay_insns"
+#define DIS_INSN_INFO_DELAY "branch_delay_insn"
 #define DIS_INSN_INFO_DATA_SZ "data_size"
 #define DIS_INSN_INFO_TYPE "type"
 #define DIS_INSN_INFO_TGT "target"
