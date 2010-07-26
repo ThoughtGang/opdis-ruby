@@ -257,6 +257,22 @@ static struct disasm_def disasm_definitions[] = {
 #endif
 };
 
+/* return disassembler fn for BFD */
+static disassembler_ftype fn_for_bfd( bfd * abfd ) {
+	int i;
+	int num_defs = sizeof(disasm_definitions) / sizeof(struct disasm_def);
+
+	for ( i = 0; i < num_defs; i++ ) {
+		struct disasm_def *def = &disasm_definitions[i];
+		if ( def->arch == abfd->arch_info->arch &&
+		     def->arch == abfd->arch_info->mach ) {
+			return def->fn;
+		}
+	}
+
+	return generic_print_address_wrapper;
+}
+
 /* configure disassemble_info for specified architecture */
 static void config_disasm_arch( struct disassemble_info * info, VALUE str ) {
 	int i;
@@ -275,7 +291,6 @@ static void config_disasm_arch( struct disassemble_info * info, VALUE str ) {
 			info->mach = def->default_mach;
 		}
 	}
-
 }
 
 /* fill array with available disassemblers */
@@ -345,13 +360,12 @@ static VALUE disasm_insn_info( struct disassemble_info * info ) {
 	return hash;
 }
 
-/* disassemble a single instruction at address, returning a ruby hash.
- * NOTE: this assumes disassemble_info.application_data is used to
- *       keep track of the number of bytes processed so far. */
-static VALUE disasm_insn( struct disassemble_info * info, bfd_vma vma ) {
+/* disassemble a single instruction at address, returning a ruby hash. */
+static VALUE disasm_insn( struct disassemble_info * info, bfd_vma vma,
+			  unsigned int * length ) {
 	disassembler_ftype fn;
 	int size;
-	VALUE ary = rb_ary_new();;
+	VALUE ary = rb_ary_new();
 	VALUE hash = rb_hash_new();
 
 	if ( vma < info->buffer_vma ) {
@@ -373,7 +387,9 @@ static VALUE disasm_insn( struct disassemble_info * info, bfd_vma vma ) {
 	size = fn( vma, info );
 
 	/* increase # bytes disassembled */
-	info->application_data += size;
+	if ( length ) {
+		*length += size;
+	}
 
 	/* fill output hash */
 	rb_hash_aset( hash, str_to_sym(DIS_INSN_VMA), INT2NUM(vma) );
@@ -399,20 +415,29 @@ static void config_libopcodes_for_target( struct disassemble_info * info,
 	info->buffer_vma = info->buffer_length = 0;
 	info->buffer = NULL;
 
-	if ( tgt->buf ) {
-		info->buffer_length = tgt->buf_len;
-		info->buffer = tgt->buf;
-	} else if ( tgt->sec ) {
+
+	if ( tgt->sec ) {
 		info->buffer_vma = tgt->sec->vma;
 		info->buffer_length = tgt->sec->size;
-		info->buffer = tgt->sec->contents;
+		info->buffer = tgt->buf;
+
 	} else if ( tgt->sym ) {
 		rb_raise(rb_eNotImpError, "BFD sym not supported");
+
 	} else if ( tgt->abfd ) {
+		info->buffer_length = tgt->buf_len;
+		info->buffer = tgt->buf;
+	} else if ( tgt->buf ) {
 		info->buffer_length = tgt->buf_len;
 		info->buffer = tgt->buf;
 		rb_raise(rb_eNotImpError, "BFD tgt not supported");
 	}
+
+	if ( tgt->abfd && (! info->application_data ||
+	     info->application_data == generic_print_address_wrapper) ) {
+		info->application_data = fn_for_bfd( tgt->abfd );
+	}
+
 }
 
 /* fill target struct based on ruby inout value */
@@ -452,9 +477,10 @@ static void load_target( VALUE tgt, struct disasm_target * dest ) {
 		Data_Get_Struct(tgt, asection, dest->sec);
 		if ( dest->sec ) {
 			dest->abfd = dest->sec->owner;
+			/* load section contents */
+			bfd_malloc_and_get_section( dest->abfd, dest->sec, 
+						    &dest->buf );
 		}
-		/* force loading of section contents */
-		rb_funcall( tgt, rb_intern("contents"), 0 );
 
 	} else if ( Qtrue == rb_obj_is_kind_of( tgt, 
 	      				rb_path2class("Bfd::Symbol") ) ) {
@@ -489,17 +515,15 @@ static void disasm_init( struct disassemble_info * info,
 	config_libopcodes_for_target( info, target );
 
 	/* override vma if caller requested it */
-	vma_arg = NUM2INT( rb_hash_lookup2(hash, 
-		           str_to_sym(DIS_ARG_BUFVMA), Qnil) );
+	vma_arg = rb_hash_lookup2(hash, str_to_sym(DIS_ARG_BUFVMA), Qnil);
 	if ( vma_arg != Qnil ) {
-		info->buffer_vma = vma_arg;
+		info->buffer_vma = NUM2UINT(vma_arg);
 	}
 	
 	/* disassembly options: offset/vma to disasm, vma of buffer */
 	/* vma to disassemble */
-	vma_arg = NUM2INT( rb_hash_lookup2(hash, str_to_sym(DIS_ARG_VMA), 
-		        Qnil) );
-	*vma = (vma_arg == Qnil) ? info->buffer_vma : vma_arg;
+	vma_arg = rb_hash_lookup2(hash, str_to_sym(DIS_ARG_VMA), Qnil);
+	*vma = (vma_arg == Qnil) ? info->buffer_vma : NUM2UINT(vma_arg);
 
 	/* libopcodes disassembler options */
 	var = rb_iv_get(class, IVAR(DIS_ATTR_OPTIONS));
@@ -517,7 +541,7 @@ static VALUE cls_disasm_single(VALUE class, VALUE tgt, VALUE hash) {
 
 	disasm_init( info, &target, &vma, class, tgt, hash );
 
-	result = disasm_insn( info, vma );
+	result = disasm_insn( info, vma, NULL );
 
 	unload_target(&target);
 
@@ -528,25 +552,24 @@ static VALUE cls_disasm_single(VALUE class, VALUE tgt, VALUE hash) {
 static VALUE cls_disasm_dis(VALUE class, VALUE tgt, VALUE hash) {
 	struct disassemble_info * info;
 	struct disasm_target target;
-	unsigned int length; 
+	unsigned int pos, length; 
 	bfd_vma vma;
 	VALUE ary;
 
+printf("INIT\n");
 	Data_Get_Struct(class, struct disassemble_info, info);
 
 	disasm_init( info, &target, &vma, class, tgt, hash );
 
-
 	/* length to disassemble to */
-	length = NUM2UINT( rb_hash_lookup2(hash, 
-			   str_to_sym(DIS_ARG_LENGTH), Qnil) );
-	length = (length == Qnil) ? info->buffer_length : length;
+	length = rb_hash_lookup2(hash, str_to_sym(DIS_ARG_LENGTH), Qnil);
+	length = (length == Qnil) ? info->buffer_length : NUM2UINT(length);
 
 	/* number of bytes disassembled */
 	ary = rb_ary_new();
-	for ( info->application_data = 0; 
-	      info->application_data < (void *) length; ) {
-		rb_ary_push(ary, disasm_insn( info, vma ));
+	for ( pos = 0; pos < length; ) {
+		/* yes, pos is modified by disasm_insn. deal. */
+		rb_ary_push(ary, disasm_insn( info, vma + pos, &pos ));
 	}
 
 	unload_target(&target);
