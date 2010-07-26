@@ -61,7 +61,7 @@ Disassemble a single instruction.
 The arguments are:
 
  tgt:: The target to disassemble. This can be a filename, an IO object, a
-       Bfd::Section object, a Bfd::Symbol object, or a Bfd::Target object.
+       Bfd::Section object, or a Bfd::Symbol object.
  args:: A has of optional arguments.
 
 The optional arguments can include:
@@ -93,7 +93,7 @@ Disassemble instructions in a target.
 The arguments are:
 
  tgt:: The target to disassemble. This can be a filename, an IO object, a
-       Bfd::Section object, a Bfd::Synmbol object, or a Bfd::Target object.
+       Bfd::Section object, or a Bfd::Synmbol object.
  args:: A has of optional arguments.
 
 The optional arguments can include:

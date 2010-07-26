@@ -422,12 +422,26 @@ static void config_libopcodes_for_target( struct disassemble_info * info,
 		info->buffer = tgt->buf;
 
 	} else if ( tgt->sym ) {
-		rb_raise(rb_eNotImpError, "BFD sym not supported");
+		unsigned int vma_off;
+		symbol_info sym;
+		asection * sec = tgt->sym->section;
 
-	} else if ( tgt->abfd ) {
-		info->buffer_length = tgt->buf_len;
-		info->buffer = tgt->buf;
+		bfd_symbol_info(tgt->sym, &sym);
+
+		if (! sym.value || (sym.value > sec->vma + sec->size ) ) {
+			rb_raise(rb_eRuntimeError, "Invalid symbol value 0x%X",
+				 (unsigned long) sym.value);
+		}
+			
+		vma_off = sym.value - sec->vma;
+
+		/* disassembly buffer is set to start of symbol in section */
+		info->buffer_vma = sym.value;
+		info->buffer = &tgt->buf[vma_off];
+		info->buffer_length = sec->size - vma_off;
+
 	} else if ( tgt->buf ) {
+		/* entire buffer is loaded at offset 9 */
 		info->buffer_length = tgt->buf_len;
 		info->buffer = tgt->buf;
 		rb_raise(rb_eNotImpError, "BFD tgt not supported");
@@ -467,11 +481,6 @@ static void load_target( VALUE tgt, struct disasm_target * dest ) {
 		dest->buf_len = RSTRING_LEN(str);
 
 	} else if ( Qtrue == rb_obj_is_kind_of( tgt, 
-	      				rb_path2class("Bfd::Target") ) ) {
-		/* BFD Target */
-		Data_Get_Struct(tgt, bfd, dest->abfd);
-
-	} else if ( Qtrue == rb_obj_is_kind_of( tgt, 
 	      				rb_path2class("Bfd::Section") ) ) {
 		/* BFD Section */
 		Data_Get_Struct(tgt, asection, dest->sec);
@@ -488,6 +497,10 @@ static void load_target( VALUE tgt, struct disasm_target * dest ) {
 		Data_Get_Struct(tgt, asymbol, dest->sym);
 		if ( dest->sym ) {
 			dest->abfd = dest->sym->the_bfd;
+			/* load contents of section containing symbol */
+			bfd_malloc_and_get_section( dest->abfd, 
+						    dest->sym->section, 
+						    &dest->buf );
 		}
 
 	} else {
@@ -556,7 +569,6 @@ static VALUE cls_disasm_dis(VALUE class, VALUE tgt, VALUE hash) {
 	bfd_vma vma;
 	VALUE ary;
 
-printf("INIT\n");
 	Data_Get_Struct(class, struct disassemble_info, info);
 
 	disasm_init( info, &target, &vma, class, tgt, hash );
