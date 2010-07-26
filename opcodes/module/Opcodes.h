@@ -8,8 +8,6 @@
 #ifndef OPCODES_RUBY_EXT_H
 #define OPCODES_RUBY_EXT_H
 
-#include <ruby.h>
-
 #define DIS_ATTR_OPTIONS "options"
 
 #define DIS_FN_DIS_INSN "disasm_insn"

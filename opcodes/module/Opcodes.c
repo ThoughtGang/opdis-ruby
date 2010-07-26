@@ -6,6 +6,7 @@
  */
 
 #include <dis-asm.h>
+#include <ruby.h>
 
 #include "Opcodes.h"
 

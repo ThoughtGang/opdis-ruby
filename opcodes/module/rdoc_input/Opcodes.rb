@@ -14,18 +14,28 @@ All of the original libopcodes data structures and constants can be found in
 <b>/usr/include/dis-asm.h</b>.
 
 == Summary
+A wrapper for the libopcodes disassembler distributed with GNU binutils.
 
 == Example
 require 'BFD'
-t = Bfd::Target.new('/tmp/a.out', {})
-
 require 'Opcodes'
+
+t = Bfd::Target.new('/tmp/a.out', {})
 
 o = Opcodes::Disassembler.new( :bfd => t, :arch => 'x86' )
 
-o.disasm_insn( t.sections['.text'].contents, :vma => 0 )
+o.disasm( t.sections['.text'], {} )
+
+== Disclaimer
+This is a minimal implementation of a libopcodes wrapper. It is intended for
+demonstration purposes only, and should not be expected to support all
+of the funtionality of the GNU binutils lipopcodes library.
+
+For a fully functional disassembler, see the Opdis gem.
 
 == Contact
+Support:: community@thoughtgang.org
+Project:: http://rubyforge.org/projects/opdis/
 =end
 
 =begin rdoc
