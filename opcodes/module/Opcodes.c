@@ -6,9 +6,13 @@
  */
 
 #include <dis-asm.h>
-#include <ruby.h>
+
+#include "Opcodes.h"
 
 #define IVAR(attr) "@" attr
+
+static VALUE modOpcodes;
+static VALUE clsDisasm;
 
 static VALUE str_to_sym( const char * str ) {
 	VALUE var = rb_str_new_cstr(str);
@@ -253,6 +257,7 @@ static struct disasm_def disasm_definitions[] = {
 #endif
 };
 
+/* configure disassemble_info for specified architecture */
 static void config_disasm_arch( struct disassemble_info * info, VALUE str ) {
 	int i;
 	int num_defs = sizeof(disasm_definitions) / sizeof(struct disasm_def);
@@ -273,6 +278,7 @@ static void config_disasm_arch( struct disassemble_info * info, VALUE str ) {
 
 }
 
+/* fill array with available disassemblers */
 static void get_available_disassemblers( VALUE * ary ) {
 	int i;
 	int num_defs = sizeof(disasm_definitions) / sizeof(struct disasm_def);
@@ -283,6 +289,7 @@ static void get_available_disassemblers( VALUE * ary ) {
 	}
 }
 
+/* convert instruction type code to string */
 static const char * insn_type_to_str( enum dis_insn_type t ) {
 	const char *s;
 	switch (t) {
@@ -301,32 +308,7 @@ static const char * insn_type_to_str( enum dis_insn_type t ) {
 /* ---------------------------------------------------------------------- */
 /* Disassembler class */
 
-static VALUE clsDisasm;
-
-#define DIS_ATTR_OPTIONS "options"
-
-// TODO: better names
-#define DIS_FN_DIS_INSN "disasm_insn"
-#define DIS_FN_DIS_SEC "disasm_section"
-
-#define DIS_ARG_BFD "bfd"
-#define DIS_ARG_ARCH "arch"
-#define DIS_ARG_OPTS "opts"
-#define DIS_ARG_VMA "vma"
-#define DIS_ARG_BUFVMA "buffer_vma"
-
-#define DIS_INSN_INFO_DELAY "branch_delay_insn"
-#define DIS_INSN_INFO_DATA_SZ "data_size"
-#define DIS_INSN_INFO_TYPE "type"
-#define DIS_INSN_INFO_TGT "target"
-#define DIS_INSN_INFO_TGT2 "target2"
-
-#define DIS_INSN_VMA "vma"
-#define DIS_INSN_SIZE "size"
-#define DIS_INSN_INFO "info"
-#define DIS_INSN_INSN "insn"
-
-#define DISASM_MAX_STR 64
+/* libopcodes callback */
 static int disasm_fprintf( void * stream, const char * format, ... ) {
 	char buf[DISASM_MAX_STR];
 	int rv;
@@ -341,6 +323,7 @@ static int disasm_fprintf( void * stream, const char * format, ... ) {
 	return rv;
 }
 
+/* fill instruction info hash based on disassemble_info */
 static VALUE disasm_insn_info( struct disassemble_info * info ) {
 	VALUE hash = rb_hash_new();
 
@@ -362,14 +345,14 @@ static VALUE disasm_insn_info( struct disassemble_info * info ) {
 	return hash;
 }
 
+/* disassemble a single instruction at address, returning a ruby hash.
+ * NOTE: this assumes disassemble_info.application_data is used to
+ *       keep track of the number of bytes processed so far. */
 static VALUE disasm_insn( struct disassemble_info * info, bfd_vma vma ) {
 	disassembler_ftype fn;
 	int size;
-	VALUE ary;
+	VALUE ary = rb_ary_new();;
 	VALUE hash = rb_hash_new();
-
-	ary = (VALUE) info->stream;
-	rb_ary_clear(ary);
 
 	if ( vma < info->buffer_vma ) {
 		/* assume small VMAs are offsets into buffer */
@@ -381,10 +364,18 @@ static VALUE disasm_insn( struct disassemble_info * info, bfd_vma vma ) {
 			 (int) vma);
 	}
 
-	fn = (disassembler_ftype) info->application_data;
+	/* prepare info for insn disassmbly */
 	info->insn_info_valid = 0;
+	info->stream = (void *) ary;
+
+	/* invoke disassembly */
+	fn = (disassembler_ftype) info->application_data;
 	size = fn( vma, info );
 
+	/* increase # bytes disassembled */
+	info->application_data += size;
+
+	/* fill output hash */
 	rb_hash_aset( hash, str_to_sym(DIS_INSN_VMA), INT2NUM(vma) );
 	rb_hash_aset( hash, str_to_sym(DIS_INSN_SIZE), INT2NUM(size) );
 	rb_hash_aset( hash, str_to_sym(DIS_INSN_INFO), disasm_insn_info(info) );
@@ -393,86 +384,177 @@ static VALUE disasm_insn( struct disassemble_info * info, bfd_vma vma ) {
 	return hash;
 }
 
-static VALUE cls_disasm_dis(VALUE class, VALUE tgt, VALUE hash) {
-	struct disassemble_info * info;
-	bfd_vma vma;
-	VALUE var;
-	char * buf = NULL;
-	unsigned int buf_len = 0;
+/* support for different target types */
+struct disasm_target {
+	unsigned char * buf;
+	unsigned int buf_len;
+	asection * sec;
+	asymbol * sym;
+	bfd * abfd;
+};
 
-	Data_Get_Struct(class, struct disassemble_info, info);
+/* fill disassemble_info struct based on contents of target struct */
+static void config_libopcodes_for_target( struct disassemble_info * info, 
+					  struct disasm_target * tgt ) {
+	info->buffer_vma = info->buffer_length = 0;
+	info->buffer = NULL;
 
-	/* disassembly options: offset/vma to disasm, vma of buffer */
-	vma = NUM2INT( rb_hash_lookup2(hash, str_to_sym(DIS_ARG_VMA), 
-		       INT2NUM(0)) );
-	info->buffer_vma = NUM2INT( rb_hash_lookup2(hash, 
-				    str_to_sym(DIS_ARG_BUFVMA), INT2NUM(0)) );
-	var = rb_iv_get(class, IVAR(DIS_ATTR_OPTIONS));
-	info->disassembler_options = StringValueCStr( var );
+	if ( tgt->buf ) {
+		info->buffer_length = tgt->buf_len;
+		info->buffer = tgt->buf;
+	} else if ( tgt->sec ) {
+		info->buffer_vma = tgt->sec->vma;
+		info->buffer_length = tgt->sec->size;
+		info->buffer = tgt->sec->contents;
+	} else if ( tgt->sym ) {
+		rb_raise(rb_eNotImpError, "BFD sym not supported");
+	} else if ( tgt->abfd ) {
+		info->buffer_length = tgt->buf_len;
+		info->buffer = tgt->buf;
+		rb_raise(rb_eNotImpError, "BFD tgt not supported");
+	}
+}
+
+/* fill target struct based on ruby inout value */
+static void load_target( VALUE tgt, struct disasm_target * dest ) {
+
+	memset( dest, 0, sizeof(struct disasm_target) );
 
 	if ( Qtrue == rb_obj_is_kind_of( tgt, rb_cString) ) {
-		buf = RSTRING_PTR(tgt);
-		buf_len = RSTRING_LEN(tgt);
+		/* string of bytes */
+		dest->buf = (unsigned char *) RSTRING_PTR(tgt);
+		dest->buf_len = RSTRING_LEN(tgt);
+
+	} else if ( Qtrue == rb_obj_is_kind_of( tgt, rb_cArray) ) {
+		/* array of bytes */
+		int i;
+		dest->buf_len = RARRAY_LEN(tgt);
+		dest->buf = calloc(dest->buf_len, 1);
+		for( i=0; i < dest->buf_len; i++ ) {
+			VALUE val = rb_ary_entry( tgt, i );
+			dest->buf[i] = (unsigned char) NUM2UINT(val);
+		}
+
 	} else if ( Qtrue == rb_obj_is_kind_of( tgt, rb_cIO) ) {
-		// TODO: read MAX_BYTES from file
-		rb_raise(rb_eNotImpError, "File not supported");
+		/* IO (file) object */
+		VALUE str = rb_funcall( tgt, rb_intern("read"), 0 );
+		dest->buf = (unsigned char*) RSTRING_PTR(str);
+		dest->buf_len = RSTRING_LEN(str);
 
 	} else if ( Qtrue == rb_obj_is_kind_of( tgt, 
 	      				rb_path2class("Bfd::Target") ) ) {
-		bfd * abfd;
-		Data_Get_Struct(tgt, bfd, abfd);
-		// TODO: bfd->iovec
-		rb_raise(rb_eNotImpError, "BFD tgt not supported");
+		/* BFD Target */
+		Data_Get_Struct(tgt, bfd, dest->abfd);
+
 	} else if ( Qtrue == rb_obj_is_kind_of( tgt, 
 	      				rb_path2class("Bfd::Section") ) ) {
-		// TODO: tgt.contents
-		rb_raise(rb_eNotImpError, "BFD sec not supported");
+		/* BFD Section */
+		Data_Get_Struct(tgt, asection, dest->sec);
+		if ( dest->sec ) {
+			dest->abfd = dest->sec->owner;
+		}
+		/* force loading of section contents */
+		rb_funcall( tgt, rb_intern("contents"), 0 );
+
+	} else if ( Qtrue == rb_obj_is_kind_of( tgt, 
+	      				rb_path2class("Bfd::Symbol") ) ) {
+		/* BFD Symbol */
+		Data_Get_Struct(tgt, asymbol, dest->sym);
+		if ( dest->sym ) {
+			dest->abfd = dest->sym->the_bfd;
+		}
+
 	} else {
 		rb_raise(rb_eArgError, 
 			"Expecting IO, String, Bfd::Target,or Bfd::Section");
 	}
-
-	info->buffer = (bfd_byte *) buf;
-	info->buffer_length = buf_len;
-
-	return disasm_insn( info, vma );
-
 }
 
-static VALUE cls_disasm_sec(VALUE class, VALUE sec) {
-	struct disassemble_info * info;
+/* free any memory allocated when loading target */
+static void unload_target( struct disasm_target * tgt ) {
+	if ( tgt->buf ) {
+		free(tgt->buf);
+	}
+}
+
+/* shared code for loading a target, configuring libopcodes, and getting
+ * options */
+static void disasm_init( struct disassemble_info * info, 
+			 struct disasm_target * target, bfd_vma * vma, 
+			 VALUE class, VALUE tgt, VALUE hash ) {
+	bfd_vma vma_arg;
 	VALUE var;
-	// TODO: LLONG
-	unsigned int i, sec_size, sec_vma;
+
+	load_target( tgt, target );
+	config_libopcodes_for_target( info, target );
+
+	/* override vma if caller requested it */
+	vma_arg = NUM2INT( rb_hash_lookup2(hash, 
+		           str_to_sym(DIS_ARG_BUFVMA), Qnil) );
+	if ( vma_arg != Qnil ) {
+		info->buffer_vma = vma_arg;
+	}
+	
+	/* disassembly options: offset/vma to disasm, vma of buffer */
+	/* vma to disassemble */
+	vma_arg = NUM2INT( rb_hash_lookup2(hash, str_to_sym(DIS_ARG_VMA), 
+		        Qnil) );
+	*vma = (vma_arg == Qnil) ? info->buffer_vma : vma_arg;
+
+	/* libopcodes disassembler options */
+	var = rb_iv_get(class, IVAR(DIS_ATTR_OPTIONS));
+	info->disassembler_options = StringValueCStr( var );
+}
+
+/* disassemble a single instruction */
+static VALUE cls_disasm_single(VALUE class, VALUE tgt, VALUE hash) {
+	struct disassemble_info * info;
+	struct disasm_target target;
+	bfd_vma vma;
+	VALUE result;
+
+	Data_Get_Struct(class, struct disassemble_info, info);
+
+	disasm_init( info, &target, &vma, class, tgt, hash );
+
+	result = disasm_insn( info, vma );
+
+	unload_target(&target);
+
+	return result;
+}
+
+/* disassemble a buffer */
+static VALUE cls_disasm_dis(VALUE class, VALUE tgt, VALUE hash) {
+	struct disassemble_info * info;
+	struct disasm_target target;
+	unsigned int length; 
+	bfd_vma vma;
 	VALUE ary;
 
 	Data_Get_Struct(class, struct disassemble_info, info);
-	if ( Qtrue != rb_obj_is_kind_of( sec, 
-		      rb_path2class("Bfd::Section") ) ) {
 
-		rb_raise(rb_eArgError, "Bfd::Section argument required");
-	}
+	disasm_init( info, &target, &vma, class, tgt, hash );
 
-	var = rb_iv_get(class, IVAR(DIS_ATTR_OPTIONS));
-	info->disassembler_options = StringValueCStr( var );
-	sec_size = NUM2UINT(rb_iv_get(sec, IVAR("size")));
-	sec_vma = NUM2UINT(rb_iv_get(sec, IVAR("vma")));
-	info->buffer_vma = sec_vma;
-	// TODO: get contents
 
+	/* length to disassemble to */
+	length = NUM2UINT( rb_hash_lookup2(hash, 
+			   str_to_sym(DIS_ARG_LENGTH), Qnil) );
+	length = (length == Qnil) ? info->buffer_length : length;
+
+	/* number of bytes disassembled */
 	ary = rb_ary_new();
-
-	for ( i=0; i < sec_size; ) {
-		VALUE insn = disasm_insn( info, sec_vma + i );
-
-		rb_ary_push( ary, insn );
-
-		i += NUM2UINT(rb_hash_fetch(insn, str_to_sym(DIS_INSN_SIZE)));
+	for ( info->application_data = 0; 
+	      info->application_data < (void *) length; ) {
+		rb_ary_push(ary, disasm_insn( info, vma ));
 	}
+
+	unload_target(&target);
 
 	return ary;
 }
 
+/* return an array of supported architectures */
 static VALUE cls_disasm_arch(VALUE class) {
 	VALUE ary = rb_ary_new();
 	get_available_disassemblers( &ary );
@@ -480,11 +562,13 @@ static VALUE cls_disasm_arch(VALUE class) {
 }
 
 
+/* instantiate a new Disassembler object */
 static VALUE cls_disasm_new(VALUE class, VALUE hash) {
 	struct disassemble_info * info;
 	VALUE instance, var;
 	VALUE argv[1] = {Qnil};
 
+	/* prepare disassemble_info struct */
 	instance = Data_Make_Struct(class, struct disassemble_info, 0, free, 
 				    info);
 	var = rb_ary_new();
@@ -492,6 +576,7 @@ static VALUE cls_disasm_new(VALUE class, VALUE hash) {
 	rb_obj_call_init(instance, 0, argv);
 
 
+	/* libopcodes disassembler options string */
 	var = rb_hash_lookup2(hash, str_to_sym(DIS_ARG_OPTS), rb_str_new("",0));
 	rb_iv_set(instance, IVAR(DIS_ATTR_OPTIONS), var );
 
@@ -500,6 +585,7 @@ static VALUE cls_disasm_new(VALUE class, VALUE hash) {
 	info->application_data = generic_print_address_wrapper;
 	info->disassembler_options = NULL;
 
+	/* configure arch based on BFD, if provided */
 	var = rb_hash_lookup(hash, str_to_sym(DIS_ARG_BFD));
 	if ( var != Qnil) {
 		if ( Qtrue == rb_obj_is_kind_of( var, 
@@ -515,6 +601,7 @@ static VALUE cls_disasm_new(VALUE class, VALUE hash) {
 		}
 	}
 
+	/* configura architecture manually, if provided */
 	var = rb_hash_lookup(hash, str_to_sym(DIS_ARG_ARCH));
 	if ( var != Qnil) {
 		config_disasm_arch(info, var);
@@ -527,21 +614,22 @@ static VALUE cls_disasm_new(VALUE class, VALUE hash) {
 static void init_disasm_class( VALUE modOpcodes ) {
 	clsDisasm = rb_define_class_under(modOpcodes, "Disassembler", 
 					  rb_cObject);
+	/* class methods */
 	rb_define_singleton_method(clsDisasm, "new", cls_disasm_new, 1);
 	rb_define_singleton_method(clsDisasm, "architectures", 
 				   cls_disasm_arch, 0);
 	
-	/* attributes */
+	/* instance attributes */
 	rb_define_attr(clsDisasm, DIS_ATTR_OPTIONS, 1, 1);
 
-	rb_define_method(clsDisasm, DIS_FN_DIS_INSN, cls_disasm_dis, 2);
-	rb_define_method(clsDisasm, DIS_FN_DIS_SEC, cls_disasm_sec, 1);
+	/* instance methods */
+	rb_define_method(clsDisasm, DIS_FN_DIS_DIS, cls_disasm_dis, 2);
+	rb_define_method(clsDisasm, DIS_FN_DIS_INSN, cls_disasm_single, 2);
 }
 
 /* ---------------------------------------------------------------------- */
 /* Opcodes Module */
 
-static VALUE modOpcodes;
 void Init_Opcodes() {
 	modOpcodes = rb_define_module("Opcodes");
 

@@ -60,8 +60,8 @@ Disassemble a single instruction.
 
 The arguments are:
 
- tgt:: The target to disassemble. This can be a filename, an IO object, or
-       a Bfd::Target object.
+ tgt:: The target to disassemble. This can be a filename, an IO object, a
+       Bfd::Section object, a Bfd::Symbol object, or a Bfd::Target object.
  args:: A has of optional arguments.
 
 The optional arguments can include:
@@ -88,14 +88,28 @@ The <i>info</i> member is a hash with the following members:
     end
 
 =begin rdoc
-Disassemble all instructions in a section.
+Disassemble instructions in a target.
 
- sec:: Bfd::Section to disassemble.
+The arguments are:
 
-Returns an array of the hashes from disasm_insn.
+ tgt:: The target to disassemble. This can be a filename, an IO object, a
+       Bfd::Section object, a Bfd::Synmbol object, or a Bfd::Target object.
+ args:: A has of optional arguments.
 
+The optional arguments can include:
+
+ vma:: Virtual Memory (Load) Address to disassemble.
+ length:: Number of bytes to disassemble. The default is the length of the
+          buffer.
+ buffer_vma:: Virtual Memory (Load) address of target. Note that this will
+              override the VMA for Bfd objects if supplied; this allows
+              the caller to disassemble the first <i>n</i> bytes of
+              a Bfd::Section without knowing its VMA by specifying a
+              <i>buffer_vma</i> of 0 and a <i>length</i> of <i>n</i>.
+
+This returns an array of the hash described in disasm_insn.
 =end
-    def disasm_section( sec )
+    def disasm( tgt, args )
     end
 
 
