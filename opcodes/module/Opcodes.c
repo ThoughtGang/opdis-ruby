@@ -431,7 +431,7 @@ static void config_libopcodes_for_target( struct disassemble_info * info,
 
 		if (! sym.value || (sym.value > sec->vma + sec->size ) ) {
 			rb_raise(rb_eRuntimeError, "Invalid symbol value 0x%X",
-				 (unsigned long) sym.value);
+				 ((unsigned long) sym.value));
 		}
 			
 		vma_off = sym.value - sec->vma;
@@ -648,12 +648,12 @@ static VALUE cls_disasm_new(VALUE class, VALUE hash) {
 
 
 static void init_disasm_class( VALUE modOpcodes ) {
-	clsDisasm = rb_define_class_under(modOpcodes, "Disassembler", 
+	clsDisasm = rb_define_class_under(modOpcodes, DIS_CLASS_NAME,
 					  rb_cObject);
 	/* class methods */
 	rb_define_singleton_method(clsDisasm, "new", cls_disasm_new, 1);
-	rb_define_singleton_method(clsDisasm, "architectures", 
-				   cls_disasm_arch, 0);
+	rb_define_singleton_method(clsDisasm, DIS_METHOD_ARCH, cls_disasm_arch,
+				   0);
 	
 	/* instance attributes */
 	rb_define_attr(clsDisasm, DIS_ATTR_OPTIONS, 1, 1);
@@ -666,8 +666,8 @@ static void init_disasm_class( VALUE modOpcodes ) {
 /* ---------------------------------------------------------------------- */
 /* Opcodes Module */
 
-void Init_Opcodes() {
-	modOpcodes = rb_define_module("Opcodes");
+void Init_OpcodesExt() {
+	modOpcodes = rb_define_module(OPCODES_MODULE_NAME);
 
 	init_disasm_class(modOpcodes);
 }

@@ -31,8 +31,14 @@
 #define DIS_INSN_INFO "info"
 #define DIS_INSN_INSN "insn"
 
+#define DIS_METHOD_ARCH "architectures"
+
 #define DISASM_MAX_STR 64
 
-void Init_Opcodes();
+/* Module and Class names */
+
+#define OPCODES_MODULE_NAME "Opcodes"
+#define DIS_CLASS_NAME "Disassembler"
+void Init_OpcodesExt();
 
 #endif
