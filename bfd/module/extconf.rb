@@ -3,5 +3,5 @@
 require 'mkmf'
 
 have_library('bfd', 'bfd_init')
-create_makefile('BFD')
+create_makefile('BFDext')
 

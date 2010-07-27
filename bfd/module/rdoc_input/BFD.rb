@@ -4,7 +4,7 @@
 =BFD
 <i>Copyright 2010 Thoughtgang <http://www.thoughtgang.org></i>
 
-=Gnu Binutils Binary File Descriptor (BFD) support
+= Gnu Binutils Binary File Descriptor (BFD) support
 
 Requires GNU binutils, available at
 http://www.gnu.org/software/binutils .
@@ -15,22 +15,34 @@ http://sourceware.org/binutils/docs-2.20/bfd/index.html .
 All of the original BFD data structures and constants can be found in
 <b>bfd.h</b>, available on Linux installations at <b>/usr/include/bfd.h</b>.
 
-=Basic Usage
+== Summary
+A wrapper for libbfd, distributed with GNU binutils.
+
+== Example
 require 'BFD'
 
 t = Bfd::Target.new('/tmp/a.out', {})
 
-# Display architecture info
 
-puts t.arch_info.architecture
+puts t.arch_info.architecture # Display architecture info
 
+
+t.sections.each{ |name,sec| puts "%s at 0x%X" % [name, sec.vma] } 
 # Display list of sections
 
-t.sections.each{ |name,sec| puts "%s at 0x%X" % [name, sec.vma] }
-
-# Display list of symbols
 
 t.symbols.each{ |name,sym| puts "%s : 0x%X" % [name, sym.value] }
+# Display list of symbols
+
+== Disclaimer
+This is a minimal implementation of BFD, intended only for use as a source
+of input to classes in the Opdis gem. It should not be expected to support
+the entire functionality of the GNU BFD library. In particular, changes made
+to the Ruby BFD objects will not be propagated to on-disk BFD objects.
+
+== Contact
+Support:: community@thoughtgang.org
+Project:: http://rubyforge.org/projects/opdis/
 =end
 
 
@@ -47,37 +59,37 @@ Source: <b>typedef struct bfd_symbol</b>.
   class Symbol
 
 =begin rdoc
-<i>name</i>: Name of the symbol. 
+Name of the symbol. 
 Source: <b>symbol_info.name</b>.
 =end
     attr_reader :name
 
 =begin rdoc
-<i>type</i>: Symbol type. 
+Symbol type. 
 Source: <b>symbol_info.type</b>
 =end
     attr_reader :type
 
 =begin rdoc
-<i>value</i>: Value of symbol. 
+Value of symbol. 
 Source: <b>symbol_info.value</b>
 =end
     attr_reader :value
 
 =begin rdoc
-<i>flags</i>: Bit-flags from bfd_symbol type definition. 
-Source: <b>bfd_symbol.flags</b>
+Bit-flags from bfd_symbol type definition. 
+Source: <b>bfd_symbol.raw_flags</b>
 =end
-    attr_reader :flags
+    attr_reader :raw_flags
 
 =begin rdoc
-<i>section</i>: Name of section containing symbol. 
+Name of section containing symbol. 
 Source: <b>bfd_symbol.section.name</b>
 =end
     attr_reader :section
 
 =begin rdoc
-<i>binding</i>: 'static' or 'dynamic'. 
+'static' or 'dynamic'. 
 Source: Table containing symbol.
 =end
     attr_reader :binding
@@ -115,9 +127,9 @@ Source: <b>bfd_section.index</b>
 
 =begin rdoc
 Section flags.
-Source: <b>bfd_section.flags</b>
+Source: <b>bfd_section.raw_flags</b>
 =end
-    attr_reader :flags 
+    attr_reader :raw_flags 
 
 =begin rdoc
 Virtual Memory (Load) address of section.
@@ -132,18 +144,10 @@ Source: <b>bfd_section.lma</b>
     attr_reader :lma
 
 =begin rdoc
-Size of section when loaded. A section with no contents, e.g.
-.bss, with still have a nonzero <i>size</i>.
-Source: <b>bfd_section.size</b>
+Size of section. 
+Source: <b>bfd_section_size()</b>
 =end
     attr_reader :size 
-
-=begin rdoc
-Size of section on-disk. a section with no contents, e.g.
-.bss, will have a zero <i>raw_size</i>.
-Source: <b>bfd_section.rawsize</b>
-=end
-    attr_reader :raw_size
 
 =begin rdoc
 Alignment of section, as an exponent of 2 (e.g. 3 means 
@@ -173,37 +177,37 @@ Source: <b>struct bfd</b>.
   class Target
 
 =begin rdoc
-<i>id</i>: ID of target.
+ID of target.
 Source: <b>bfd.id</b>
 =end
     attr_reader :id
 
 =begin rdoc
-<i>filename</i>: Filename of target.
+Filename of target.
 Source: <b>bfd.filename</b>
 =end
     attr_reader :filename
 
 =begin rdoc
-<i>format</i>: Format (object, archive, core) of target.
+Format (object, archive, core) of target.
 Source: <b>bfd.format</b>
 =end
     attr_reader :format
 
 =begin rdoc
-<i>format_flags</i>: Flags for BFD format.
+Flags for BFD format.
 Source: <b>bfd.flags</b>
 =end
-    attr_reader :format_flags
+    attr_reader :raw_format_flags
 
 =begin rdoc
-<i>start_address</i>: Entry point (first instruction) of BFD if an executable.
+Entry point (first instruction) of BFD if an executable.
 Source: <b>bfd.start_address</b>
 =end
     attr_reader :start_address
 
 =begin rdoc
-<i>arch_info</i>: Architecture information for target.
+Architecture information for target.
 This is a hash containing the following values:
   * bits_per_word
   * bits_per_address
@@ -215,37 +219,37 @@ Source: <b>bfd.arch_info</b> (see <b>struct bfd_arch_info</b>)
     attr_reader :arch_info
 
 =begin rdoc
-<i>flavour</i>: Flavour of BFD file, e.g. ELF, COFF, AOUT, etc.
+Flavour of BFD file, e.g. ELF, COFF, AOUT, etc.
 Source: <b>bfd.flavour</b> 
 =end
     attr_reader :flavour
 
 =begin rdoc
-<i>type</i>: Kind of target, e.g. elf64-x86-64.
+Kind of target, e.g. elf64-x86-64.
 Source: <b>bfd_target.name</b>
 =end
     attr_reader :type
 
 =begin rdoc
-<i>type_flags</i>: Flags for target type.
+Flags for target type.
 Source: <b>bfd_target.object_flags</b>
 =end
-    attr_reader :type_flags
+    attr_reader :raw_type_flags
 
 =begin rdoc
-<i>endian</i>: Endianness (big or little) of target.
+Endianness (big or little) of target.
 Source: <b>bfd_target.byteorder</b>
 =end
     attr_reader :endian
 
 =begin rdoc
-<i>sections</i>: Hash of sections names to section objects.
+Hash of sections names to section objects.
 Source: <b>bfd.sections</b>
 =end
     attr_reader :sections
 
 =begin rdoc
-<i>symbols</i>: Hash of symbol names to symbol targets.
+Hash of symbol names to symbol targets.
 Includes both static and dynamic symbols.
 Source: <b>bfd_canonicalize_symtab()</b> and 
 <b>bfd_canonicalize_dynamic_symtab()</b>.
