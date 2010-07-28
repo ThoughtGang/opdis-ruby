@@ -20,11 +20,11 @@ A wrapper for the libopcodes disassembler distributed with GNU binutils.
 require 'BFD'
 require 'Opcodes'
 
-t = Bfd::Target.new('/tmp/a.out', {})
+t = Bfd::Target.new('/tmp/a.out')
 
 o = Opcodes::Disassembler.new( :bfd => t, :arch => 'x86' )
 
-o.disasm( t.sections['.text'], {} )
+o.disasm( t.sections['.text'] )
 
 == Disclaimer
 This is a minimal implementation of a libopcodes wrapper. It is intended for
