@@ -330,7 +330,7 @@ static VALUE cls_target_symbols(VALUE instance) {
 static void init_target_class( VALUE modBfd ) {
 	clsTarget = rb_define_class_under(modBfd, TARGET_CLASS_NAME, 
 					  rb_cObject);
-	rb_define_singleton_method(clsTarget, "new", cls_target_new, 2);
+	rb_define_singleton_method(clsTarget, "ext_new", cls_target_new, 2);
 	// TODO: how to take a default value for an argument?
 	
 	/* attributes (read-only) */

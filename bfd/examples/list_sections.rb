@@ -52,7 +52,7 @@ def display_section(sec)
 end
 
 def list_secs(filename)
-  tgt = Bfd::Target.new(filename, {})
+  tgt = Bfd::Target.new(filename)
   puts "#{tgt.id}: #{tgt.filename}"
   tgt.sections.values.sort_by { |s| s.index }.each { |s| display_section s }
   puts

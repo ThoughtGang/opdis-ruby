@@ -5,7 +5,7 @@
 require 'BFD'
 
 def display_info(filename)
-  tgt = Bfd::Target.new(filename, {})
+  tgt = Bfd::Target.new(filename)
   puts "#{tgt.id}: #{tgt.filename}"
 
   puts "#{tgt.flavour} #{tgt.format}: #{tgt.format_flags.join(',')}"

@@ -43,7 +43,7 @@ def display_symbol(sym)
 end
 
 def list_syms(filename)
-  tgt = Bfd::Target.new(filename, {})
+  tgt = Bfd::Target.new(filename)
   puts "#{tgt.id}: #{tgt.filename}"
   tgt.symbols.keys.sort.each { |name| display_symbol tgt.symbols[name] }
   puts

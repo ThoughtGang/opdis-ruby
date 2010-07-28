@@ -35,6 +35,18 @@ module Bfd
               0x1000 => 'HAS_LOAD_PAGE',
               0x2000 => 'LINKER_CREATED',
               0x4000 => 'DETERMINISTIC_OUTPUT' }
+
+=begin rdoc
+Create a new Target from a path or IO object. This just wraps for ext_new
+and provides a default value for args.
+=end
+    def new(target, args={})
+      ext_new(target, args)
+    end
+
+    def initialize(target, args={})
+    end
+
     def flag_strings(flags)
       f = []
       FLAGS.each { |k,v| f << v if (flags & k > 0) }
