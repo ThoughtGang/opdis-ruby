@@ -94,7 +94,7 @@ The <i>info</i> member is a hash with the following members:
  target:: Target address of branch or dereference.
  target2:: Second target address.
 =end
-    def disasm_insn(tgt, args)
+    def ext_disasm_insn(tgt, args)
     end
 
 =begin rdoc
@@ -119,7 +119,7 @@ The optional arguments can include:
 
 This returns an array of the hash described in disasm_insn.
 =end
-    def disasm( tgt, args )
+    def ext_disasm( tgt, args )
     end
 
 
