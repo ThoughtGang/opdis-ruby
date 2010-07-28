@@ -5,16 +5,6 @@
  * See http://www.gnu.org/licenses/gpl.txt for details.
  */
 
-/* Usage:
- * 	require 'Opdis'
- * 	t = Bfd.new( filename )
- * 	o = Opdis.new()
- * 	o.disassemble( t, strategy: o.STRAT_ENTRY ).each do |i|
- * 		...
- * 	end
- * 	insns = o.disassemble( t, strategy: o.STRAT_CFLOW, start: 0 )
- * 	insns = o.disassemble( t, start: 0, len : 100 )
- */
 #include <ruby.h>
 
 #include <opdis/opdis.h>
@@ -97,7 +87,8 @@ static VALUE cls_output_new( VALUE class ) {
 }
 
 static void init_output_class( VALUE modOpdis ) {
-	clsOutput = rb_define_class_under(modOpdis, "Disassembly", rb_cHash);
+	clsOutput = rb_define_class_under(modOpdis, OPDIS_OUTPUT_CLASS_NAME, 
+					  rb_cHash);
 	rb_define_singleton_method(clsOutput, "new", cls_output_new, 0);
 
 	/* read-only attribute for error list */
@@ -642,6 +633,7 @@ static VALUE cls_disasm_disassemble(VALUE instance, VALUE tgt, VALUE hash ) {
 	Data_Get_Struct(instance, opdis_info_t, opdis_orig);
 	opdis = opdis_dupe(opdis_orig);
 
+	// TODO: block should also return Disassembly
 	/* yielding to a block is easy */
 	if ( rb_block_given_p() ) {
 		// TODO: should errors raise an exception? Make an option.
@@ -675,8 +667,6 @@ static VALUE cls_disasm_new(VALUE class, VALUE hash) {
 
 	instance = Data_Wrap_Struct(class, NULL, opdis_term, opdis);
 	rb_obj_call_init(instance, 0, argv);
-	//TODO: is this viable? how does # of args get determined?
-	//rb_obj_call_init(instance, 0, &Qnil);
 
 	cls_disasm_handle_args(instance, hash);
 
@@ -720,8 +710,9 @@ static void define_disasm_constants() {
 }
 
 static void init_disasm_class( VALUE modOpdis ) {
-	clsDisasm = rb_define_class_under(modOpdis, "Disassembler", rb_cObject);
-	rb_define_singleton_method(clsDisasm, "new", cls_disasm_new, 1);
+	clsDisasm = rb_define_class_under(modOpdis, OPDIS_DISASM_CLASS_NAME, 
+					  rb_cObject);
+	rb_define_singleton_method(clsDisasm, "ext_new", cls_disasm_new, 1);
 
 	/* read-only attributes */
 	rb_define_attr(clsDisasm, DIS_ATTR_DECODER, 1, 0);
@@ -754,16 +745,13 @@ static void init_disasm_class( VALUE modOpdis ) {
 	rb_define_method(clsDisasm, DIS_METHOD_DISASM, cls_disasm_disassemble, 
 			 2);
 
-	/* aliases */
-	rb_define_alias(clsDisasm, DIS_ALIAS_DISASM, DIS_METHOD_DISASM );
-
 	define_disasm_constants();
 }
 
 /* ---------------------------------------------------------------------- */
 /* Opdis Module */
 
-void Init_Opdis() {
+void Init_OpdisExt() {
 	symToSym = rb_intern("to_sym");
 	symCall = rb_intern("call");
 	symRead = rb_intern("read");
@@ -774,7 +762,7 @@ void Init_Opdis() {
 	symVisited = rb_intern(HANDLER_METHOD);
 	symResolve = rb_intern(RESOLVER_METHOD);
 
-	modOpdis = rb_define_module("Opdis");
+	modOpdis = rb_define_module(OPDIS_MODULE_NAME);
 
 	init_disasm_class(modOpdis);
 	init_output_class(modOpdis);

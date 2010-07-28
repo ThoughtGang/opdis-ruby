@@ -9,8 +9,7 @@
 #define OPDIS_RB_OPDIS_H
 
 /* method names */
-#define DIS_METHOD_DISASM "disassemble"
-#define DIS_ALIAS_DISASM "disasm"
+#define DIS_METHOD_DISASM "ext_disassemble"
 
 /* attribute names */
 #define DIS_ATTR_DECODER "insn_decoder"
@@ -79,5 +78,11 @@
 #define BFD_TGT_PATH "Bfd::Target"
 #define BFD_SEC_PATH "Bfd::Section"
 #define BFD_SYM_PATH "Bfd::Symbol"
+
+#define OPDIS_MODULE_NAME "Opdis"
+#define OPDIS_DISASM_CLASS_NAME "Disassembler"
+#define OPDIS_OUTPUT_CLASS_NAME "Disassembly"
+
+void Init_OpdisExt();
 
 #endif

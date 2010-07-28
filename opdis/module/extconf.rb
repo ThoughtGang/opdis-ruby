@@ -55,4 +55,4 @@ require_opdis_library('opdis', 'opdis_init', opdis_base)
 
 # ----------------------------------------------------------------------
 # Makefile
-create_makefile('Opdis')
+create_makefile('OpdisExt')
