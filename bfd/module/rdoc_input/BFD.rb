@@ -21,7 +21,7 @@ A wrapper for libbfd, distributed with GNU binutils.
 == Example
 require 'BFD'
 
-t = Bfd::Target.new('/tmp/a.out', {})
+t = Bfd::Target.new('/tmp/a.out')
 
 
 puts t.arch_info.architecture # Display architecture info
