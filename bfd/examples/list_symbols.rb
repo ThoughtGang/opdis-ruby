@@ -4,42 +4,11 @@
 
 require 'BFD'
 
-# Defined in /usr/include/bfd.h : typedef struct bfd_symbol
-SYM_FLAGS={ 0x000001 => 'LOCAL',
-            0x000002 => 'GLOBAL',
-            0x000004 => 'DEBUGGING',
-            0x000008 => 'FUNCTION',
-            0x000020 => 'KEEP',
-            0x000040 => 'KEEP_G',
-            0x000080 => 'WEAK',
-            0x000100 => 'SECTION_SYM',
-            0x000200 => 'OLD_COMMON',
-            0x000400 => 'NOT_AT_END',
-            0x000800 => 'CONSTRUCTOR ',
-            0x001000 => 'WARNING',
-            0x002000 => 'INDIRECT',
-            0x004000 => 'FILE',
-            0x008000 => 'DYNAMIC',
-            0x010000 => 'OBJECT',
-            0x020000 => 'DEBUGGING_RELOC',
-            0x040000 => 'THREAD_LOCAL',
-            0x080000 => 'RELC',
-            0x100000 => 'SRELC',
-            0x200000 => 'SYNTHETIC',
-            0x400000 => 'GNU_INDIRECT_FUNCTION',
-            0x800000 => 'GNU_UNIQUE' }
-
-def sym_flag_strings(flags)
-  f = []
-  SYM_FLAGS.each { |k,v| f << v if (flags & k > 0) }
-  return f
-end
-
 def display_symbol(sym)
   puts "%s : 0x%X" % [sym.name, sym.value]
   puts "\t#{sym.binding}"
   puts "\t#{sym.section}"
-  puts "\tFlags: #{sym_flag_strings(sym.flags).join(',')}"
+  puts "\tFlags: #{sym.flags.join(',')}"
 end
 
 def list_syms(filename)

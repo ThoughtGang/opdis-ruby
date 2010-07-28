@@ -331,7 +331,6 @@ static void init_target_class( VALUE modBfd ) {
 	clsTarget = rb_define_class_under(modBfd, TARGET_CLASS_NAME, 
 					  rb_cObject);
 	rb_define_singleton_method(clsTarget, "ext_new", cls_target_new, 2);
-	// TODO: how to take a default value for an argument?
 	
 	/* attributes (read-only) */
 	rb_define_attr(clsTarget, TGT_ATTR_ID, 1, 0);

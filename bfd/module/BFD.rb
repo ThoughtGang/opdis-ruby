@@ -2,24 +2,30 @@
 # Copyright 2010 Thoughtgang <http://www.thoughtgang.org>
 # Ruby additions to BFD module
 
-=begin rdoc
-=end
-
 # Load C extension wrapping libbfd.so
 require 'BFDext'
 
 module Bfd
 
   class Target
-    # Defined in /usr/include/bfd.h : enum bfd_flavour
+=begin rdoc
+BFD file format.
+Defined in /usr/include/bfd.h : enum bfd_flavour
+=end
     FLAVOURS = %w{ unknown aout coff ecoff xcoff elf ieee nlm oasys tekhex srec
                    verilog ihex som os0k versados msdos ovax evax mmo mach_o
                    pef pef_xlib sym }
              
-    # Defined in /usr/include/bfd.h : enum bfd_endian
+=begin rdoc
+Byte order.
+Defined in /usr/include/bfd.h : enum bfd_endian
+=end
     ENDIAN = %w{ big little unknown }
 
-    # Defined in /usr/include/bfd.h : struct bfd 
+=begin rdoc
+File Format Flags.
+Defined in /usr/include/bfd.h : struct bfd 
+=end
     FLAGS = { 0x0001 => 'HAS_RELOC',
               0x0002 => 'EXEC_P',
               0x0004 => 'LINEN',
@@ -40,37 +46,54 @@ module Bfd
 Create a new Target from a path or IO object. This just wraps for ext_new
 and provides a default value for args.
 =end
-    def new(target, args={})
+    def self.new(target, args={})
       ext_new(target, args)
     end
 
-    def initialize(target, args={})
-    end
-
+=begin rdoc
+Return an array of the names of bit-flags that are set.
+=end
     def flag_strings(flags)
       f = []
       FLAGS.each { |k,v| f << v if (flags & k > 0) }
       return f
     end
 
+=begin rdoc
+Return an array of the names of the file format flags that are set.
+See raw_format_flags.
+=end
     def format_flags()
       flag_strings(@raw_format_flags)
     end
 
+=begin rdoc
+Return an array of the names of the target type flags that are set.
+See raw_type_flags.
+=end
     def type_flags()
       flag_strings(@raw_type_flags)
     end
 
+=begin rdoc
+Return the target file format.
+See raw_flavour.
+=end
     def flavour
       FLAVOURS[@raw_flavour]
     end
 
+=begin rdoc
+Return the byte order of the target.
+See raw_endian.
+=end
     def endian
       ENDIAN[@raw_endian]
     end
 
 
 =begin rdoc
+Return the Bfd::Section in the target that contains <i>vma</i>, or <i>nil</i>.
 =end
     def section_for_vma(vma)
       @sections.values.each do |s|
@@ -84,8 +107,9 @@ and provides a default value for args.
   class Section
 
 =begin rdoc
+Section flags.
+Defined in /usr/include/bfd.h : typedef struct bfd_section
 =end
-# Defined in /usr/include/bfd.h : typedef struct bfd_section
     FLAGS={ 0x00000001 => 'ALLOC',
             0x00000002 => 'LOAD',
             0x00000004 => 'RELOC',
@@ -120,6 +144,8 @@ and provides a default value for args.
     }
 
 =begin rdoc
+Return an array of the names of the bit-flags that are set in Section.
+See raw_flags.
 =end
     def flags()
       f = []
@@ -132,8 +158,9 @@ and provides a default value for args.
   class Symbol
     
 =begin rdoc
+Symbol flags.
+Defined in /usr/include/bfd.h : typedef struct bfd_symbol
 =end
-    # Defined in /usr/include/bfd.h : typedef struct bfd_symbol
     FLAGS={ 0x000001 => 'LOCAL',
             0x000002 => 'GLOBAL',
             0x000004 => 'DEBUGGING',
@@ -160,6 +187,8 @@ and provides a default value for args.
     }
 
 =begin rdoc
+Return an array of the names of the bit-flags that are set in Symbol.
+See raw_flags.
 =end
     def flags()
       f = []
