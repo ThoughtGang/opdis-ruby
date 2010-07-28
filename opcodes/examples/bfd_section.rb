@@ -11,7 +11,7 @@ end
 
 def disasm_sections(filename, sections)
   # BFD for target file
-  tgt = Bfd::Target.new(filename, {})
+  tgt = Bfd::Target.new(filename)
   puts "#{tgt.id}: #{tgt.filename}"
 
   # Disassembler for BFD
@@ -22,7 +22,7 @@ def disasm_sections(filename, sections)
     sec = tgt.sections[name]
     raise "Section #{name} not in #{tgt.filename}" if not sec
 
-    disasm.disasm(sec, {}).each { |i| print_insn i }
+    disasm.disasm(sec).each { |i| print_insn i }
   end
 end
 

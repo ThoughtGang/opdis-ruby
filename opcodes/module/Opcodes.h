@@ -8,10 +8,11 @@
 #ifndef OPCODES_RUBY_EXT_H
 #define OPCODES_RUBY_EXT_H
 
+/* Disassembler Class */
 #define DIS_ATTR_OPTIONS "options"
 
-#define DIS_FN_DIS_INSN "disasm_insn"
-#define DIS_FN_DIS_DIS "disasm"
+#define DIS_FN_DIS_INSN "ext_disasm_insn"
+#define DIS_FN_DIS_DIS "ext_disasm"
 
 #define DIS_ARG_BFD "bfd"
 #define DIS_ARG_ARCH "arch"
@@ -20,6 +21,7 @@
 #define DIS_ARG_BUFVMA "buffer_vma"
 #define DIS_ARG_LENGTH "length"
 
+/* Instruction info hash */
 #define DIS_INSN_INFO_DELAY "branch_delay_insn"
 #define DIS_INSN_INFO_DATA_SZ "data_size"
 #define DIS_INSN_INFO_TYPE "type"
