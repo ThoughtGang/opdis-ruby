@@ -408,6 +408,7 @@ struct disasm_target {
 	asection * sec;
 	asymbol * sym;
 	bfd * abfd;
+	unsigned int ruby_manages_buf;
 };
 
 /* fill disassemble_info struct based on contents of target struct */
@@ -445,7 +446,6 @@ static void config_libopcodes_for_target( struct disassemble_info * info,
 		/* entire buffer is loaded at offset 9 */
 		info->buffer_length = tgt->buf_len;
 		info->buffer = tgt->buf;
-		rb_raise(rb_eNotImpError, "BFD tgt not supported");
 	}
 
 	if ( tgt->abfd && (! info->application_data ||
@@ -464,6 +464,7 @@ static void load_target( VALUE tgt, struct disasm_target * dest ) {
 		/* string of bytes */
 		dest->buf = (unsigned char *) RSTRING_PTR(tgt);
 		dest->buf_len = RSTRING_LEN(tgt);
+		dest->ruby_manages_buf = 1;
 
 	} else if ( Qtrue == rb_obj_is_kind_of( tgt, rb_cArray) ) {
 		/* array of bytes */
@@ -480,6 +481,7 @@ static void load_target( VALUE tgt, struct disasm_target * dest ) {
 		VALUE str = rb_funcall( tgt, rb_intern("read"), 0 );
 		dest->buf = (unsigned char*) RSTRING_PTR(str);
 		dest->buf_len = RSTRING_LEN(str);
+		dest->ruby_manages_buf = 1;
 
 	} else if ( Qtrue == rb_obj_is_kind_of( tgt, 
 	      				rb_path2class("Bfd::Section") ) ) {
@@ -512,7 +514,7 @@ static void load_target( VALUE tgt, struct disasm_target * dest ) {
 
 /* free any memory allocated when loading target */
 static void unload_target( struct disasm_target * tgt ) {
-	if ( tgt->buf ) {
+	if ( tgt->buf && ! tgt->ruby_manages_buf ) {
 		free(tgt->buf);
 	}
 }
