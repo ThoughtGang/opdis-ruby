@@ -27,7 +27,7 @@ See ext_disasm.
 
 =begin rdoc
 =end
-    alias :disasm, :disassemble
+    alias :disasm :disassemble
 
   end
 

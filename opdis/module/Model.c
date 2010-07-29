@@ -274,7 +274,7 @@ static void init_reg_class( VALUE modOpdis ) {
 	rb_define_alias(clsReg, REG_ATTR_NAME, GEN_ATTR_ASCII );
 
 	define_reg_constants( clsReg );
-	init_reg_attributes( clsRegOp );
+	init_reg_attributes( clsReg );
 
 	/* Register Operand */
 	clsRegOp = rb_define_class_under(modOpdis, "RegisterOperand", clsOp);

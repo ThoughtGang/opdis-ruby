@@ -23,32 +23,61 @@ module Opdis
   class Instruction
 
 =begin rdoc
+The decoding status of an instruction. This will be DECODE_INVALID or any
+combination of DECODE_BASIC, DECODE_MNEMONIC, DECODE_OPERANDS,
+DECODE_MNEMONIC_FLAGS, and DECODE_OPERAND_FLAGS -- depending on how much
+work the instruction decoder performed successfully.
+=end
+    attr_accessor :status
+
+=begin rdoc
+Virtual Memory Address. The in-memory address of the instruction.
 =end
     attr_reader :vma
 
 =begin rdoc
+The size of the instruction in bytes.
 =end
     attr_reader :size
 
 =begin rdoc
+An array containing the bytes of the instruction.
 =end
     attr_reader :bytes
 
 =begin rdoc
+The target operand of a branch instruction, or <i>nil</i>.
 =end
     attr_reader :target
 
 =begin rdoc
+The destination (write) operand of an instruction, or <i>nil</i>.
 =end
     attr_reader :dest
 
 =begin rdoc
+The first source (read) operand of an instruction, or <i>nil</i>.
 =end
     attr_reader :src
 
 =begin rdoc
+The category or high-level type of the instruction. This will be one of
+CAT_CFLOW, CAT_STACK, CAT_LOADSTORE, CAT_TEST, CAT_MATH, CAT_BIT, CAT_IO,
+CAT_TRAP, CAT_PRIV, CAT_NOP, or <i>nil</i> if the instruction category is
+unknown.
+=end
+    attr_accessor :category
+
+=begin rdoc
 =end
     attr_reader :flags
+
+=begin rdoc
+The Instruction Set Architecture of the instruction. This is a subset of the
+full CPU architecture ISA. 
+    ISA_GEN, ISA_FPU, ISA_GPU, ISA_SIMD, ISA_VM
+=end
+    attr_accessor :isa
 
 =begin rdoc
 =end
@@ -60,19 +89,7 @@ module Opdis
 
 =begin rdoc
 =end
-    attr_accessor :status
-
-=begin rdoc
-=end
     attr_accessor :mnemonic
-
-=begin rdoc
-=end
-    attr_accessor :category
-
-=begin rdoc
-=end
-    attr_accessor :isa
 
 =begin rdoc
 =end
