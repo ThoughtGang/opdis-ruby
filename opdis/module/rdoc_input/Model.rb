@@ -132,6 +132,9 @@ full CPU architecture ISA.
     
 =begin rdoc
 =end
+    CAT_UNKNOWN='unknown'
+=begin rdoc
+=end
     CAT_CFLOW='control-flow'
 =begin rdoc
 =end

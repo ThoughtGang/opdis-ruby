@@ -295,7 +295,8 @@ static void fill_ruby_absaddr( opdis_abs_addr_t * addr, VALUE dest ) {
 
 static VALUE absaddr_from_c( opdis_abs_addr_t * addr ) {
 	VALUE args[1] = {Qnil};
-	VALUE var = rb_class_new_instance(0, args, clsAbsAddr);
+	/* NOTE: default ctor requires one argument */
+	VALUE var = rb_class_new_instance(1, args, clsAbsAddr);
 	fill_ruby_absaddr(addr, var);
 	return var;
 }
@@ -310,7 +311,8 @@ static void absaddr_to_c( VALUE addr, opdis_abs_addr_t * dest ) {
 
 static VALUE absaddr_op_from_c( opdis_abs_addr_t * addr ) {
 	VALUE args[1] = {Qnil};
-	VALUE var = rb_class_new_instance(0, args, clsAbsAddrOp);
+	/* NOTE: default ctor requires one argument */
+	VALUE var = rb_class_new_instance(1, args, clsAbsAddrOp);
 	fill_ruby_absaddr(addr, var);
 	return var;
 }
@@ -416,7 +418,8 @@ static void fill_ruby_addrexpr( opdis_addr_expr_t * expr, VALUE dest ) {
 
 static VALUE addrexpr_op_from_c( opdis_addr_expr_t * expr ) {
 	VALUE args[1] = {Qnil};
-	VALUE var = rb_class_new_instance(0, args, clsAddrExprOp);
+	/* NOTE: default ctor requires one argument */
+	VALUE var = rb_class_new_instance(1, args, clsAddrExprOp);
 	fill_ruby_addrexpr( expr, var );
 	return var;
 }
@@ -554,7 +557,8 @@ static uint64_t imm_to_c( VALUE imm ) {
 
 static VALUE imm_op_from_c( opdis_op_t * op ) {
 	VALUE args[1] = {Qnil};
-	VALUE var = rb_class_new_instance(0, args, clsImmOp);
+	/* NOTE: Immediate operand default ctor requires an arg */
+	VALUE var = rb_class_new_instance(1, args, clsImmOp);
 
 	rb_iv_set(var, IVAR(IMM_ATTR_VMA), op->value.immediate.vma );
 	rb_iv_set(var, IVAR(IMM_ATTR_SIGNED), op->value.immediate.s );

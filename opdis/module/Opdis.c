@@ -18,7 +18,7 @@
 #define IVAR(attr) "@" attr
 #define SETTER(attr) attr "="
 
-static VALUE symToSym, symRead, symCall, symAppend, symSize, symPath;
+static VALUE symToSym, symRead, symCall, symSize, symPath;
 static VALUE symDecode, symVisited, symResolve;
 
 static VALUE clsDisasm, clsOutput;
@@ -83,7 +83,8 @@ static VALUE cls_output_contain( VALUE instance, VALUE vma ) {
 }
 
 static VALUE cls_output_new( VALUE class ) {
-	VALUE instance = rb_class_new(clsOutput);
+	VALUE args[1] = {Qnil};
+	VALUE instance = rb_class_new_instance(0, args, clsOutput);
 	rb_iv_set(instance, IVAR(OUT_ATTR_ERRORS), rb_ary_new() );
 	return instance;
 }
@@ -410,20 +411,28 @@ static void cls_disasm_handle_args( VALUE instance, VALUE hash ) {
 	if ( Qfalse != var ) cls_disasm_set_arch(instance, var);
 }
 
-/* local display handler for blocks: this yields the current insn to arg */
-static void local_block_display( const opdis_insn_t * i, void * arg ) {
-	VALUE block = (VALUE) arg;
-	VALUE insn = Opdis_insnFromC(i);
+struct DISPLAY_ARGS { VALUE output; VALUE block; };
 
-	rb_funcall(block, symCall, 1, insn);
-}
-
-/* local display handler: this adds instructions to a Disassembly object */
+/* local display handler: this adds instructions to a Disassembly object
+ * and invokes block if provided. */
 static void local_display( const opdis_insn_t * i, void * arg ) {
-	VALUE output = (VALUE) arg;
+	struct DISPLAY_ARGS * args = (struct DISPLAY_ARGS *) arg;
 	VALUE insn = Opdis_insnFromC(i);
 
-	rb_hash_aset( output, INT2NUM(i->vma), insn );
+	if ( insn == Qnil ) {
+		char buf[128];
+		VALUE errors = rb_iv_get(args->output, IVAR(OUT_ATTR_ERRORS));
+		snprintf( buf, 127-1, "%s: Unable to convert C insn to Ruby", 
+			  DIS_ERR_DECODE );
+		rb_ary_push( errors, rb_str_new_cstr(buf) );
+		return;
+	}
+
+	if ( Qnil != args->block ) {
+		rb_funcall(args->block, symCall, 1, insn);
+	}
+
+	rb_hash_aset( args->output, INT2NUM(i->vma), insn );
 }
 
 /* local error handler: this appends errors to a ruby array in arg */
@@ -446,7 +455,7 @@ static void local_error( enum opdis_error_t error, const char * msg,
 	snprintf( buf, 127-1, "%s: %s", type, msg );
 
 	/* append error message to error list */
-	rb_funcall( errors, symAppend, 1, rb_str_new_cstr(buf) );
+	rb_ary_push( errors, rb_str_new_cstr(buf) );
 }
 
 static void config_buf_from_args( opdis_buf_t buf, VALUE hash ) {
@@ -612,8 +621,6 @@ static void perform_disassembly( VALUE instance, opdis_t opdis, VALUE target,
 		if (! tgt.abfd ) {
 			rb_raise(rb_eArgError, "Bfd::Target required");
 		}
-opdis->debug = 1;
-printf("9 %p\n", opdis->decoder );
 		opdis_disasm_bfd_entry( opdis, tgt.abfd );
 	} else {
 		if ( tgt.buf ) {
@@ -630,9 +637,9 @@ printf("9 %p\n", opdis->decoder );
 
 /* Disassembler strategies produce blocks */
 static VALUE cls_disasm_disassemble(VALUE instance, VALUE tgt, VALUE hash ) {
-	VALUE args[1] = {Qnil};
-	VALUE output;
 	opdis_t opdis, opdis_orig;
+	VALUE args[1] = {Qnil};
+	struct DISPLAY_ARGS display_args = { Qnil, Qnil };
 
 	/* Create duplicate opdis_t in order to be threadsafe */
 	Data_Get_Struct(instance, opdis_info_t, opdis_orig);
@@ -641,28 +648,22 @@ static VALUE cls_disasm_disassemble(VALUE instance, VALUE tgt, VALUE hash ) {
 	// TODO: block should also return Disassembly
 	/* yielding to a block is easy */
 	if ( rb_block_given_p() ) {
-		// TODO: should errors raise an exception? Make an option.
-
-		opdis_set_display(opdis, local_block_display, 
-				(void *) rb_block_proc());
-		perform_disassembly( instance, opdis, tgt, hash );
-		opdis_term(opdis);
-		return Qtrue;
+		display_args.block = rb_block_proc();
 	}
 
-	/* ...otherwise we have to fill an output object */
-	output = rb_class_new_instance( 0, args, clsOutput );
-	//output = cls_output_new( clsOutput );
+	display_args.output = rb_class_new_instance( 0, args, clsOutput );
 
-	opdis_set_display( opdis, local_display, (void *) output );
+	opdis_set_display( opdis, local_display, &display_args );
+
 	opdis_set_error_reporter( opdis, local_error, 
-			(void *) rb_iv_get(output, IVAR(OUT_ATTR_ERRORS)) );
+			(void *) rb_iv_get(display_args.output, 
+					   IVAR(OUT_ATTR_ERRORS)) );
 
 	perform_disassembly( instance, opdis, tgt, hash );
 
 	opdis_term(opdis);
 
-	return output;
+	return display_args.output;
 }
 
 /* new: takes hash of arguments */
@@ -794,7 +795,6 @@ void Init_OpdisExt() {
 	symToSym = rb_intern("to_sym");
 	symCall = rb_intern("call");
 	symRead = rb_intern("read");
-	symAppend = rb_intern("<<");
 	symSize = rb_intern("size");
 	symPath = rb_intern("path");
 
