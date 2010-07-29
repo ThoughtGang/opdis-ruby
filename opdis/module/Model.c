@@ -5,9 +5,6 @@
  * See http://www.gnu.org/licenses/gpl.txt for details.
  */
 
-//  void rb_define_private_method(VALUE klass, const char *name, VALUE
-//  (*func)(), int argc)
-//
 #include <ruby.h>
 
 #include <opdis/model.h>
@@ -183,7 +180,8 @@ static void fill_ruby_reg( opdis_reg_t * reg, VALUE dest ) {
 }
 
 static VALUE reg_from_c( opdis_reg_t * reg ) {
-	VALUE var = rb_class_new(clsReg);
+	VALUE args[1] = {Qnil};
+	VALUE var = rb_class_new_instance(0, args, clsReg);
 	fill_ruby_reg(reg, var);
 	return var;
 }
@@ -210,7 +208,8 @@ static void reg_to_c( VALUE reg, opdis_reg_t * dest ) {
 /* Register Operand */
 
 static VALUE reg_op_from_c( opdis_reg_t * reg ) {
-	VALUE var = rb_class_new(clsRegOp);
+	VALUE args[1] = {Qnil};
+	VALUE var = rb_class_new_instance(0, args, clsRegOp);
 	fill_ruby_reg(reg, var);
 	return var;
 }
@@ -295,7 +294,8 @@ static void fill_ruby_absaddr( opdis_abs_addr_t * addr, VALUE dest ) {
 }
 
 static VALUE absaddr_from_c( opdis_abs_addr_t * addr ) {
-	VALUE var = rb_class_new(clsAbsAddr);
+	VALUE args[1] = {Qnil};
+	VALUE var = rb_class_new_instance(0, args, clsAbsAddr);
 	fill_ruby_absaddr(addr, var);
 	return var;
 }
@@ -309,7 +309,8 @@ static void absaddr_to_c( VALUE addr, opdis_abs_addr_t * dest ) {
 /* Absolute Address Operand */
 
 static VALUE absaddr_op_from_c( opdis_abs_addr_t * addr ) {
-	VALUE var = rb_class_new(clsAbsAddrOp);
+	VALUE args[1] = {Qnil};
+	VALUE var = rb_class_new_instance(0, args, clsAbsAddrOp);
 	fill_ruby_absaddr(addr, var);
 	return var;
 }
@@ -414,7 +415,8 @@ static void fill_ruby_addrexpr( opdis_addr_expr_t * expr, VALUE dest ) {
 }
 
 static VALUE addrexpr_op_from_c( opdis_addr_expr_t * expr ) {
-	VALUE var = rb_class_new(clsAddrExprOp);
+	VALUE args[1] = {Qnil};
+	VALUE var = rb_class_new_instance(0, args, clsAddrExprOp);
 	fill_ruby_addrexpr( expr, var );
 	return var;
 }
@@ -551,7 +553,8 @@ static uint64_t imm_to_c( VALUE imm ) {
 }
 
 static VALUE imm_op_from_c( opdis_op_t * op ) {
-	VALUE var = rb_class_new(clsImmOp);
+	VALUE args[1] = {Qnil};
+	VALUE var = rb_class_new_instance(0, args, clsImmOp);
 
 	rb_iv_set(var, IVAR(IMM_ATTR_VMA), op->value.immediate.vma );
 	rb_iv_set(var, IVAR(IMM_ATTR_SIGNED), op->value.immediate.s );
@@ -651,6 +654,7 @@ static void op_to_c( VALUE op, opdis_op_t * dest ) {
 }
 
 static VALUE op_from_c( opdis_op_t * op ) {
+	VALUE args[1] = {Qnil};
 	VALUE dest;
 	switch (op->category) {
 		case opdis_op_cat_register:
@@ -662,7 +666,7 @@ static VALUE op_from_c( opdis_op_t * op ) {
 		case opdis_op_cat_expr:
 			dest = addrexpr_op_from_c(&op->value.expr); break;
 		case opdis_op_cat_unknown:
-			dest = rb_class_new(clsOp);
+			dest = rb_class_new_instance(0, args, clsOp);
 		default: break;
 	}
 
@@ -866,6 +870,7 @@ static enum opdis_insn_decode_t insn_status_code( VALUE instance ) {
 
 static void set_insn_status( VALUE instance, enum opdis_insn_decode_t val ) {
 	VALUE status = rb_iv_get(instance, IVAR(INSN_ATTR_STATUS) );
+
 	if ( val & opdis_decode_invalid ) {
 		rb_ary_push(status, rb_str_new_cstr( INSN_DECODE_INVALID) );
 	}
@@ -931,7 +936,8 @@ static void fill_ruby_insn( const opdis_insn_t * insn, VALUE dest ) {
 }
 
 static VALUE insn_from_c( const opdis_insn_t * insn ) {
-	VALUE var = rb_class_new(clsInsn);
+	VALUE args[1] = {Qnil};
+	VALUE var = rb_class_new_instance(0, args, clsInsn);
 	fill_ruby_insn( insn, var );
 	return var;
 }
@@ -1160,7 +1166,6 @@ static void define_insn_attributes() {
 	rb_define_attr(clsInsn, INSN_ATTR_OPERANDS, 1, 1);
 
 	/* private attributes */
-	// TODO : make private
 	rb_define_attr(clsInsn, GEN_ATTR_ASCII, 1, 1);
 	rb_define_attr(clsInsn, INSN_ATTR_TGT_IDX, 1, 1);
 	rb_define_attr(clsInsn, INSN_ATTR_DEST_IDX, 1, 1);
@@ -1180,7 +1185,7 @@ static void define_insn_attributes() {
 
 static void init_insn_class( VALUE modOpdis ) {
 	clsInsn = rb_define_class_under(modOpdis, "Instruction", rb_cObject);
-	rb_define_method(clsInsn, "initialize", cls_insn_init, 1);
+	rb_define_method(clsInsn, "initialize", cls_insn_init, 0);
 	rb_define_method(clsInsn, "to_s", cls_generic_to_s, 0);
 	rb_define_method(clsInsn, "branch?", cls_insn_branch, 0);
 	rb_define_method(clsInsn, "fallthrough?", cls_insn_fallthrough, 0);

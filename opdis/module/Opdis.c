@@ -612,6 +612,8 @@ static void perform_disassembly( VALUE instance, opdis_t opdis, VALUE target,
 		if (! tgt.abfd ) {
 			rb_raise(rb_eArgError, "Bfd::Target required");
 		}
+opdis->debug = 1;
+printf("9 %p\n", opdis->decoder );
 		opdis_disasm_bfd_entry( opdis, tgt.abfd );
 	} else {
 		if ( tgt.buf ) {
@@ -628,6 +630,7 @@ static void perform_disassembly( VALUE instance, opdis_t opdis, VALUE target,
 
 /* Disassembler strategies produce blocks */
 static VALUE cls_disasm_disassemble(VALUE instance, VALUE tgt, VALUE hash ) {
+	VALUE args[1] = {Qnil};
 	VALUE output;
 	opdis_t opdis, opdis_orig;
 
@@ -648,7 +651,8 @@ static VALUE cls_disasm_disassemble(VALUE instance, VALUE tgt, VALUE hash ) {
 	}
 
 	/* ...otherwise we have to fill an output object */
-	output = cls_output_new( clsOutput );
+	output = rb_class_new_instance( 0, args, clsOutput );
+	//output = cls_output_new( clsOutput );
 
 	opdis_set_display( opdis, local_display, (void *) output );
 	opdis_set_error_reporter( opdis, local_error, 
