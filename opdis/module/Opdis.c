@@ -5,6 +5,8 @@
  * See http://www.gnu.org/licenses/gpl.txt for details.
  */
 
+#include <errno.h>
+#include <string.h>
 #include <ruby.h>
 
 #include <opdis/opdis.h>
@@ -16,7 +18,7 @@
 #define IVAR(attr) "@" attr
 #define SETTER(attr) attr "="
 
-static VALUE symToSym, symRead, symCall, symAppend, symSize;
+static VALUE symToSym, symRead, symCall, symAppend, symSize, symPath;
 static VALUE symDecode, symVisited, symResolve;
 
 static VALUE clsDisasm, clsOutput;
@@ -673,6 +675,38 @@ static VALUE cls_disasm_new(VALUE class, VALUE hash) {
 	return instance;
 }
 
+/* usage: writes a list of disassembler options to IO object */
+static VALUE cls_disasm_usage(VALUE class, VALUE io) {
+	const char * filename;
+	VALUE path;
+	FILE * f;
+
+	if (! rb_respond_to(io, symPath) ) {
+		rb_raise( rb_eArgError, "Argument must respond to :path" );
+	}
+
+	/* get path from ruby File object */
+	path = rb_funcall(io, symPath, 0);
+	if ( Qnil == path ) {
+		rb_raise( rb_eArgError, "Object#path returned nil" );
+	}
+
+	filename = StringValueCStr(path);
+	f = fopen( filename, "w");
+	if (! f ) {
+		rb_raise( rb_eRuntimeError, 
+			  "Could not open %s object for write: %s", 
+			  filename, strerror(errno) );
+	}
+
+	/* invoke libopcodes to write usage into to FILE * */
+	disassembler_usage(f);
+
+	fclose(f);
+
+	return Qtrue;
+}
+
 static void define_disasm_constants() {
 	/* Error types */
 	rb_define_const(clsDisasm, DIS_ERR_BOUNDS_NAME,
@@ -713,6 +747,7 @@ static void init_disasm_class( VALUE modOpdis ) {
 	clsDisasm = rb_define_class_under(modOpdis, OPDIS_DISASM_CLASS_NAME, 
 					  rb_cObject);
 	rb_define_singleton_method(clsDisasm, "ext_new", cls_disasm_new, 1);
+	rb_define_singleton_method(clsDisasm, "ext_usage", cls_disasm_usage, 1);
 
 	/* read-only attributes */
 	rb_define_attr(clsDisasm, DIS_ATTR_DECODER, 1, 0);
@@ -757,6 +792,7 @@ void Init_OpdisExt() {
 	symRead = rb_intern("read");
 	symAppend = rb_intern("<<");
 	symSize = rb_intern("size");
+	symPath = rb_intern("path");
 
 	symDecode = rb_intern(DECODER_METHOD);
 	symVisited = rb_intern(HANDLER_METHOD);

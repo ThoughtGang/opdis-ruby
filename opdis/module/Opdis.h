@@ -10,6 +10,7 @@
 
 /* method names */
 #define DIS_METHOD_DISASM "ext_disassemble"
+#define DIS_METHOD_usage "ext_usage"
 
 /* attribute names */
 #define DIS_ATTR_DECODER "insn_decoder"

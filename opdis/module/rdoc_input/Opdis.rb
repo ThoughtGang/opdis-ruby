@@ -18,15 +18,15 @@ Requires GNU binutils. BFD gem may be required.
 
   require 'Opdis'
 
-  o = Opdis.new() # Create disassembler for target
+  o = Opdis.Disassembler.new() # Create disassembler for target
 
   # Control-flow disassembly from BFD entry point
-  o.disassemble( t, strategy: o.STRAT_ENTRY ).each do |i|
+  o.disassemble( t, strategy: o.STRATEGY_ENTRY ).each do |i|
      # ... do something with instruction
   end
 
   # Control-flow disassembly from offset 0 in target
-  insns = o.disassemble( t, strategy: o.STRAT_CFLOW, start: 0 )
+  insns = o.disassemble( t, strategy: o.STRATEGY_CFLOW, start: 0 )
   insn.each { |i| puts i }
 
   insns = o.disassemble( t, start: 0, len : 100 )
@@ -127,9 +127,14 @@ module Opdis
 
 =begin rdoc
 =end
-    def architectures
+    def architectures()
     end
   end
+
+=begin rdoc
+=end
+    def ext_usage()
+    end
 
 =begin rdoc
 =end
