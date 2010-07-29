@@ -37,7 +37,7 @@ def hex_to_bytes( bytes )
 end
 
 if __FILE__ == $0
-  raise "Usage: #{$0} BYTES" if ARGV.length == 0
+  raise "Usage: #{$0} BYTE [BYTE...]" if ARGV.length == 0
 
   disasm_bytes( hex_to_bytes(ARGV) )
 end
