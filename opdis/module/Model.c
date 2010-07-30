@@ -875,9 +875,11 @@ static enum opdis_insn_decode_t insn_status_code( VALUE instance ) {
 static void set_insn_status( VALUE instance, enum opdis_insn_decode_t val ) {
 	VALUE status = rb_iv_get(instance, IVAR(INSN_ATTR_STATUS) );
 
-	if ( val & opdis_decode_invalid ) {
+	if ( val == opdis_decode_invalid ) {
 		rb_ary_push(status, rb_str_new_cstr( INSN_DECODE_INVALID) );
+		return;
 	}
+
 	if ( val & opdis_decode_basic ) {
 		rb_ary_push(status, rb_str_new_cstr( INSN_DECODE_BASIC) );
 	}
@@ -917,6 +919,7 @@ static void fill_ruby_insn( const opdis_insn_t * insn, VALUE dest ) {
 	rb_iv_set(dest, IVAR(INSN_ATTR_COMMENT), 
 		  rb_str_new_cstr(insn->comment));
 
+	buf[0] = '\0';
 	opdis_insn_cat_str( insn, buf, 128 );
 	rb_iv_set(dest, IVAR(INSN_ATTR_CATEGORY), rb_str_new_cstr(buf));
 

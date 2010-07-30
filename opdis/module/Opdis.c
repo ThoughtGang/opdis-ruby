@@ -428,8 +428,6 @@ static void local_display( const opdis_insn_t * i, void * arg ) {
 		return;
 	}
 
-	//rb_gc_mark( insn );
-
 	if ( Qnil != args->block ) {
 		rb_funcall(args->block, symCall, 1, insn);
 	}
