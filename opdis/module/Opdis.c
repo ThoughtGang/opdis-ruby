@@ -554,8 +554,12 @@ static void load_target( opdis_t opdis, VALUE tgt, VALUE hash,
 static void perform_disassembly( VALUE instance, opdis_t opdis, VALUE target,
 				 VALUE hash ) {
 	VALUE var;
-	VALUE vma = rb_hash_lookup2(hash, str_to_sym(DIS_ARG_VMA), INT2NUM(0));
-	VALUE len = rb_hash_lookup2(hash, str_to_sym(DIS_ARG_LEN), INT2NUM(0));
+	VALUE rb_vma = rb_hash_lookup2(hash, str_to_sym(DIS_ARG_VMA), 
+				       INT2NUM(0));
+	VALUE rb_len = rb_hash_lookup2(hash, str_to_sym(DIS_ARG_LEN), 
+				       INT2NUM(0));
+	opdis_vma_t vma = NUM2ULL(rb_vma);
+	opdis_off_t len = NUM2UINT(rb_len);
 	const char * strategy = DIS_STRAT_LINEAR;
 	struct OPDIS_TGT tgt = {0};
 
