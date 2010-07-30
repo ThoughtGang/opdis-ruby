@@ -47,7 +47,9 @@ Create a new Target from a path or IO object. This just wraps for ext_new
 and provides a default value for args.
 =end
     def self.new(target, args={})
-      ext_new(target, args)
+      bfd = ext_new(target, args)
+      yield bfd if (bfd and block_given?)
+      return bfd
     end
 
 =begin rdoc

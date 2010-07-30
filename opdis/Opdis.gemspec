@@ -20,7 +20,7 @@ spec = Gem::Specification.new do |spec|
                         'GNU binutils library and headers' ]
   spec.add_dependency('BFD', '>= 1.0.4')
 
-  spec.files = Dir['module/*.c', 'module/*.h']
+  spec.files = Dir['module/*.c', 'module/*.h', 'examples/*.rb']
   spec.extra_rdoc_files = Dir['module/rdoc_input/*.rb']
   spec.extensions = Dir['module/extconf.rb']
   spec.test_files = nil
