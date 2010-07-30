@@ -13,24 +13,25 @@ Requires GNU binutils. BFD gem may be required.
 == Example
 
   require 'BFD'
-
-  t = Bfd::Target.new( filename ) # Load target using BFD gem
-
   require 'Opdis'
 
-  o = Opdis.Disassembler.new() # Create disassembler for target
+  o = Opdis.Disassembler.new() # Create disassembler
 
-  # Control-flow disassembly from BFD entry point
-  o.disassemble( t, strategy: o.STRATEGY_ENTRY ).each do |i|
-     # ... do something with instruction
+  Bfd::Target.new( filename ) do |tgt
+    # Control-flow disassembly from BFD entry point
+
+    o.disassemble( tgt, strategy: o.STRATEGY_ENTRY ) do |i|
+       # ... do something with instruction
+    end
+
+    # Control-flow disassembly from offset 0 in target
+    insns = o.disassemble( t, strategy: o.STRATEGY_CFLOW, start: 0 )
+    insn.each { |i| puts i }
+
+    insns = o.disassemble( t, start: 0, len : 100 )
+    insn.each { |i| puts i }
+
   end
-
-  # Control-flow disassembly from offset 0 in target
-  insns = o.disassemble( t, strategy: o.STRATEGY_CFLOW, start: 0 )
-  insn.each { |i| puts i }
-
-  insns = o.disassemble( t, start: 0, len : 100 )
-  insn.each { |i| puts i }
 
 == Contact
 Support:: community@thoughtgang.org
