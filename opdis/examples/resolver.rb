@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby1.9
 # Opdis Example: Resolver
-# Custom Address Resolver used in control-flow disassemlby of BFD entry point
+# Custom Address Resolver used in control-flow disassembly of BFD entry point
 # Copyright 2010 Thoughtgang <http://www.thoughtgang.org>
 
 require 'BFD'

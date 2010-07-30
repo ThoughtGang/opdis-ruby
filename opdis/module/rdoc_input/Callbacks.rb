@@ -74,7 +74,7 @@ module Opdis
     # uses opdis tree to store addresses
 =begin rdoc
 =end
-    def visited?
+    def visited?( insn )
     end
 
   end
