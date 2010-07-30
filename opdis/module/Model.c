@@ -919,9 +919,12 @@ static void fill_ruby_insn( const opdis_insn_t * insn, VALUE dest ) {
 
 	opdis_insn_cat_str( insn, buf, 128 );
 	rb_iv_set(dest, IVAR(INSN_ATTR_CATEGORY), rb_str_new_cstr(buf));
+
+	buf[0] = '\0';
 	opdis_insn_isa_str( insn, buf, 128 );
 	rb_iv_set(dest, IVAR(INSN_ATTR_ISA), rb_str_new_cstr(buf));
 
+	buf[0] = '\0';
 	opdis_insn_flags_str( insn, buf, 128, "|" );
 	rb_iv_set(dest, IVAR(INSN_ATTR_FLAGS), 
 		  rb_str_split(rb_str_new_cstr(buf), "|"));

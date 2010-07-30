@@ -117,6 +117,18 @@ module Opdis
     SYNTAXES = [ SYNTAX_ATT, SYNTAX_INTEL ]
 
 =begin rdoc
+Args: 
+resolver
+addr_tracker
+insn_decoder
+syntax
+debug
+options
+strategy
+arch
+vma 
+length
+buffer_vma
 =end
     def ext_disassemble(target, args)
     end
