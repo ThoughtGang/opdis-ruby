@@ -40,7 +40,7 @@ static VALUE cls_generic_to_s( VALUE instance ) {
 /* ---------------------------------------------------------------------- */
 /* Operand Base Class */
 
-static VALUE cls_op_init(VALUE instance, VALUE hash) {
+static VALUE cls_op_init(VALUE instance) {
 	rb_iv_set(instance, IVAR(INSN_ATTR_FLAGS), rb_ary_new() );
 	return instance;
 }
@@ -58,7 +58,7 @@ static void define_op_constants() {
 
 static void init_op_class( VALUE modOpdis ) {
 	clsOp = rb_define_class_under(modOpdis, "Operand", rb_cObject);
-	rb_define_method(clsOp, "initialize", cls_op_init, 1);
+	rb_define_method(clsOp, "initialize", cls_op_init, 0);
 	rb_define_method(clsOp, "to_s", cls_generic_to_s, 0);
 
 	define_op_constants();
@@ -182,7 +182,9 @@ static void fill_ruby_reg( opdis_reg_t * reg, VALUE dest ) {
 static VALUE reg_from_c( opdis_reg_t * reg ) {
 	VALUE args[1] = {Qnil};
 	VALUE var = rb_class_new_instance(0, args, clsReg);
-	fill_ruby_reg(reg, var);
+	if ( var != Qnil ) {
+		fill_ruby_reg(reg, var);
+	}
 	return var;
 }
 
@@ -210,7 +212,9 @@ static void reg_to_c( VALUE reg, opdis_reg_t * dest ) {
 static VALUE reg_op_from_c( opdis_reg_t * reg ) {
 	VALUE args[1] = {Qnil};
 	VALUE var = rb_class_new_instance(0, args, clsRegOp);
-	fill_ruby_reg(reg, var);
+	if ( var != Qnil ) {
+		fill_ruby_reg(reg, var);
+	}
 	return var;
 }
 
@@ -295,9 +299,10 @@ static void fill_ruby_absaddr( opdis_abs_addr_t * addr, VALUE dest ) {
 
 static VALUE absaddr_from_c( opdis_abs_addr_t * addr ) {
 	VALUE args[1] = {Qnil};
-	/* NOTE: default ctor requires one argument */
-	VALUE var = rb_class_new_instance(1, args, clsAbsAddr);
-	fill_ruby_absaddr(addr, var);
+	VALUE var = rb_class_new_instance(0, args, clsAbsAddr);
+	if ( var != Qnil ) {
+		fill_ruby_absaddr(addr, var);
+	}
 	return var;
 }
 
@@ -311,9 +316,10 @@ static void absaddr_to_c( VALUE addr, opdis_abs_addr_t * dest ) {
 
 static VALUE absaddr_op_from_c( opdis_abs_addr_t * addr ) {
 	VALUE args[1] = {Qnil};
-	/* NOTE: default ctor requires one argument */
-	VALUE var = rb_class_new_instance(1, args, clsAbsAddrOp);
-	fill_ruby_absaddr(addr, var);
+	VALUE var = rb_class_new_instance(0, args, clsAbsAddrOp);
+	if ( var != Qnil ) {
+		fill_ruby_absaddr(addr, var);
+	}
 	return var;
 }
 
@@ -418,9 +424,10 @@ static void fill_ruby_addrexpr( opdis_addr_expr_t * expr, VALUE dest ) {
 
 static VALUE addrexpr_op_from_c( opdis_addr_expr_t * expr ) {
 	VALUE args[1] = {Qnil};
-	/* NOTE: default ctor requires one argument */
-	VALUE var = rb_class_new_instance(1, args, clsAddrExprOp);
-	fill_ruby_addrexpr( expr, var );
+	VALUE var = rb_class_new_instance(0, args, clsAddrExprOp);
+	if ( var != Qnil ) {
+		fill_ruby_addrexpr( expr, var );
+	}
 	return var;
 }
 
@@ -557,8 +564,10 @@ static uint64_t imm_to_c( VALUE imm ) {
 
 static VALUE imm_op_from_c( opdis_op_t * op ) {
 	VALUE args[1] = {Qnil};
-	/* NOTE: Immediate operand default ctor requires an arg */
-	VALUE var = rb_class_new_instance(1, args, clsImmOp);
+	VALUE var = rb_class_new_instance(0, args, clsImmOp);
+	if ( var == Qnil ) {
+		return var;
+	}
 
 	rb_iv_set(var, IVAR(IMM_ATTR_VMA), op->value.immediate.vma );
 	rb_iv_set(var, IVAR(IMM_ATTR_SIGNED), op->value.immediate.s );
@@ -672,6 +681,10 @@ static VALUE op_from_c( opdis_op_t * op ) {
 		case opdis_op_cat_unknown:
 			dest = rb_class_new_instance(0, args, clsOp);
 		default: break;
+	}
+
+	if ( dest == Qnil ) {
+		return dest;
 	}
 
 	rb_iv_set(dest, IVAR(GEN_ATTR_ASCII), rb_str_new_cstr(op->ascii));
@@ -948,7 +961,9 @@ static void fill_ruby_insn( const opdis_insn_t * insn, VALUE dest ) {
 static VALUE insn_from_c( const opdis_insn_t * insn ) {
 	VALUE args[1] = {Qnil};
 	VALUE var = rb_class_new_instance(0, args, clsInsn);
-	fill_ruby_insn( insn, var );
+	if ( var != Qnil ) {
+		fill_ruby_insn( insn, var );
+	}
 	return var;
 }
 
