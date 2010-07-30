@@ -84,6 +84,7 @@ module Opdis
   class AddressResolver
 
 =begin rdoc
+Return nil if address cannot be resolved
 =end
     def resolve( insn )
       # invoke opdis default resolver 
