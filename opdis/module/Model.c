@@ -1235,7 +1235,11 @@ void Opdis_initModel( VALUE modOpdis ) {
 }
 
 VALUE Opdis_insnFromC( const opdis_insn_t * insn ) {
-	return (insn == NULL) ? Qnil : insn_from_c(insn);
+	VALUE var = Qnil; 
+	if ( insn ) {
+		var = insn_from_c(insn);
+	}
+	return var;
 }
 
 int Opdis_insnFillFromC( const opdis_insn_t * insn, VALUE dest ) {

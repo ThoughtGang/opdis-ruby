@@ -433,6 +433,8 @@ static void local_display( const opdis_insn_t * i, void * arg ) {
 	}
 
 	rb_hash_aset( args->output, INT2NUM(i->vma), insn );
+
+	rb_thread_schedule();
 }
 
 /* local error handler: this appends errors to a ruby array in arg */
@@ -575,6 +577,9 @@ static void perform_disassembly( VALUE instance, opdis_t opdis, VALUE target,
 
 	rb_thread_schedule();
 
+	// TODO: INVESTIGATE why without this, ruby crashes!
+	rb_gc_disable();
+
 	/* Single instruction disassembly */
 	if (! strcmp( strategy, DIS_STRAT_SINGLE ) ) {
 		opdis_insn_t * insn = ALLOC_FIXED_INSN;
@@ -636,6 +641,9 @@ static void perform_disassembly( VALUE instance, opdis_t opdis, VALUE target,
 	if ( tgt.buf ) {
 		opdis_buf_free(tgt.buf);
 	}
+
+	// See above TODO
+	rb_gc_enable();
 }
 
 
