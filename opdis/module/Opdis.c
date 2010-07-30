@@ -428,15 +428,13 @@ static void local_display( const opdis_insn_t * i, void * arg ) {
 		return;
 	}
 
-	rb_hash_aset( args->output, INT2NUM(i->vma), insn );
+	//rb_gc_mark( insn );
 
 	if ( Qnil != args->block ) {
-//printf("BEFORE MARK\n");
-//		rb_gc_mark(insn);
-//printf("AFTER MARK\n");
 		rb_funcall(args->block, symCall, 1, insn);
 	}
 
+	rb_hash_aset( args->output, INT2NUM(i->vma), insn );
 }
 
 /* local error handler: this appends errors to a ruby array in arg */
@@ -497,11 +495,9 @@ static opdis_buf_t opdis_buf_for_target( VALUE tgt, VALUE hash ) {
 
 	/* IO object containing bytes */
 	} else if ( Qtrue == rb_obj_is_kind_of( tgt, rb_cIO ) ) {
-printf("GOT IO\n");
 		VALUE str = rb_funcall( tgt, symRead, 0 );
 		buf = (unsigned char*) RSTRING_PTR(str);
 		buf_len = RSTRING_LEN(str);
-printf("BUF_LEN: %d\n", buf_len);
 
 	} else {
 		rb_raise(rb_eArgError, "Buffer must be a String, IO or Array");
@@ -513,15 +509,6 @@ printf("BUF_LEN: %d\n", buf_len);
 
 	obuf = opdis_buf_alloc( buf_len, 0 );
 	opdis_buf_fill( obuf, 0, buf, buf_len );
-printf("OBUF VMA %X LEN %d\n", obuf->vma, obuf->len );
-{int i, j;
- for (i=0; i < obuf->len; i += 16) {
-	 for (j=0; j < 16; j++ ) {
-		 printf(" %02X", obuf->data[i + j]);
-	 }
-	 printf("\n");
- }
-}
 
 	/* apply target-specific args (vma, etc) */
 	config_buf_from_args( obuf, hash );
@@ -610,8 +597,6 @@ static void perform_disassembly( VALUE instance, opdis_t opdis, VALUE target,
 		if ( tgt.abfd ) {
 		 	opdis_disasm_bfd_linear( opdis, tgt.abfd, vma, len );
 		} else {
-printf("VMA: %X LEN: %d\n", vma, len );
-printf("BUF VMA: %X BUF_LEN: %d\n", opdis->config.buffer_vma, opdis->config.buffer_length );
 		 	opdis_disasm_linear( opdis, tgt.buf, vma, len );
 		}
 
