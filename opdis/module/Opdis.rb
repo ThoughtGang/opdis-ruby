@@ -115,7 +115,6 @@ Return array of available disassembler options, as printed by libopcodes.
         opts.concat tmp.readlines
       end
 
-      # TODO: cleanup opts a bit
       opts
     end
 

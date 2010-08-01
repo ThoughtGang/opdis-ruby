@@ -8,7 +8,9 @@
 
 == Summary
 
-== Example
+libopdis uses callback functions to override its default behavior. The
+OpdisExt extension provides stubs that allow Ruby objects to be used
+for these callbacks.
 
 == Contact
 Support:: community@thoughtgang.org
