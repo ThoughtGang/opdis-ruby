@@ -37,6 +37,7 @@
 #define INSN_ATTR_CATEGORY "category"
 #define INSN_ATTR_ISA "isa"
 #define INSN_ATTR_FLAGS "flags"
+#define INSN_ATTR_FLAGS "flags"
 #define INSN_ATTR_COMMENT "comment"
 #define INSN_ATTR_OPERANDS "operands"
 #define INSN_ATTR_TGT "target" // method
@@ -175,7 +176,7 @@
 
 /* Register Class */
 
-#define REG_ATTR_FLAGS "flags"
+#define REG_ATTR_FLAGS "purpose"
 #define REG_ATTR_ID "id"
 #define REG_ATTR_SIZE "size"
 #define REG_ATTR_NAME "name"
