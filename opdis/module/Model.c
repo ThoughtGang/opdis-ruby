@@ -63,8 +63,8 @@ static void init_op_class( VALUE modOpdis ) {
 
 	define_op_constants();
 
-	/* read-only attributes */
-	rb_define_attr(clsOp, OP_ATTR_FLAGS, 1, 0);
+	/* read-write attributes */
+	rb_define_attr(clsOp, OP_ATTR_FLAGS, 1, 1);
 	rb_define_attr(clsOp, GEN_ATTR_ASCII, 1, 1);
 	rb_define_attr(clsOp, OP_ATTR_DATA_SZ, 1, 1);
 }
