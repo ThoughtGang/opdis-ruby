@@ -105,8 +105,11 @@ This is used to prevent endless loops in control-flow analysis.
   class VisitedAddressTracker
 
 =begin rdoc
-    # invoke opdis default handler
-    # uses opdis tree to store addresses
+Return <i>true</i> if the address at Instruction.vma has been encountered,
+false otherwise.
+
+VisitedAddressTracker#visited? will invoke the Opdis default visited address 
+handler, which uses an AVL tree to store visited addresses.
 =end
     def visited?( insn )
     end
@@ -121,8 +124,13 @@ branch instruction, if possible.
   class AddressResolver
 
 =begin rdoc
-Return nil if address cannot be resolved
-      # invoke opdis default resolver 
+Return the VMA (e.g. the contents of a register, or the contents pointed
+to by an address expression) for the target operand of the instruction. 
+Return <i>nil</i> if there is no target operand, or the operand VMA cannot
+be determined.
+
+AddressResolver#resolve will invoke the default Opdis resolver, which returns 
+<i>nil</i> regardless of operand value.
 =end
     def resolve( insn )
     end

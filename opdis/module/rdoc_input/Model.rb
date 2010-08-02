@@ -8,7 +8,10 @@
 
 == Summary
 
-==Example
+The Opdis data model provides a representation for Instruction and Opdis
+objects that supports more sophisticated analyses than simple string
+compares. The original strings produced by libopcodes are also made
+available for 'raw' processing.
 
 ==Contact
 Support:: community@thoughtgang.org
@@ -19,6 +22,24 @@ Project:: http://rubyforge.org/projects/opdis/
 module Opdis
 
 =begin rdoc
+A disassembled instruction.
+
+The Instruction object contains information which may not be made available by
+the decoder. The libopcodes disassembler generates a list of ASCII strings
+which the decoder converts to Instruction objects. The generic decoder
+(see InstructionDecoder) fills the <i>status</i>, <i>vma</i>, <i>size</i>, 
+<i>bytes</i>, and <i>ascii</i> members.
+
+Use the <i>status</i> member to determine how much information the decoder
+was able to produce. DECODE_BASIC indicates that the generic decoder has
+filled the fields mentioned above. DECODE MNEMONIC and DECODE_OPERANDS
+indicate that the decoder has successfully identified the mnemonic and
+the operands of the instruction, respectively; this means that the
+<i>prefixes</i>, <i>mnemonic</i>, <i>operands</i>, <i>srce</i>, <i>dest</i>,
+and <i>target</i> members have been filled, though the Operand objects in
+<i>operands</i> will only have their <i>ascii</i> member filled. 
+DECODE_MNEMONIC_FLAGS and DECODE_OPERAND_FLAGS indicate that instruction
+and operand metadata have been filled.
 =end
   class Instruction
 
@@ -107,28 +128,34 @@ Invalid instruction.
 =end
     DECODE_INVALID='invalid'
 =begin rdoc
-Basic instruction decoding (vma, bytes, ascii) has been performed.
+Basic instruction decoding has been performed. This means that the <i>vma</i>,
+<i>size</i>, <i>bytes</i>, and <i>ascii</i> members are valid.
 =end
     DECODE_BASIC='basic'
 =begin rdoc
-Instruction mnemonic has been decoded.
+Instruction mnemonic has been decoded. This means that the <i>prefixes</i> and
+<i>mnemonic</i> members are valid.
 =end
     DECODE_MNEMONIC='mnemonic'
 =begin rdoc
-Basic operand decoding has been performed.
+Basic operand decoding has been performed. This means that the <i>src</i>,
+<i>dest</i>, and <i>target</i> members are valid. The <i>operands</i> valid
+has been filled with Operand objects whose <i>ascii</i> member is valid.
 =end
     DECODE_OPERANDS='operands'
 =begin rdoc
-Instruction metadata (category, flags) has been decoded.
+Instruction metadata has been decoded. This means that the Instruction
+<i>isa</i>, <i>category</i>, and <i>flags</i> members are valid.
 =end
     DECODE_MNEMONIC_FLAGS='mnemonic flags'
 =begin rdoc
-Operand metadata (type, flags) has been decoded.
+Operand metadata has been decoded. This means that the <i>operands</i> field
+is filled with objects derived from Operand, whose members are all valid.
 =end
     DECODE_OPERAND_FLAGS='operand flags'
 
 =begin rdoc
-General instruction set.
+General-purpose instruction set. The default ISA for all instructions.
 =end
     ISA_GEN='general'
 =begin rdoc
@@ -140,16 +167,17 @@ Graphics card instruction set.
 =end
     ISA_GPU='gpu'
 =begin rdoc
-SIMD (single instruction, multiple data) instruction set.
+SIMD (single instruction, multiple data) instruction set. Examples include
+MMX, SSE, SSE2, SSE3, Altivec, and 3DNow! instructions.
 =end
     ISA_SIMD='simd'
 =begin rdoc
-Virtual Machine or virtualization (hypervisor) extension.
+Virtual Machine or virtualization (hypervisor) extensions.
 =end
     ISA_VM='vm'
     
 =begin rdoc
-Uknrecognized instruction.
+Unrecognized instruction.
 =end
     CAT_UNKNOWN='unknown'
 =begin rdoc
@@ -287,37 +315,50 @@ Write to I/O port.
     FLG_OUT='output to port'
 
 =begin rdoc
-=end
-    def initialize(args)
-    end
-
-=begin rdoc
+Returns true if the instruction is a branch (is a CALL, CALLCC, JMP, or
+JMPCC). This is only reliable if <i>status</i> includes DECODE_MNEMONIC_FLAGS.
 =end
     def branch?
     end
 
 =begin rdoc
+Returns true if execution falls through to the next instruction. This is true
+in all cases except JMP and RET. This is only reliable if <i>status</i> 
+includes DECODE_MNEMONIC_FLAGS.
 =end
     def fallthrough?
     end
 
 =begin rdoc
+Returns the <i>ascii</i> field if the instruction.
 =end
     def to_s
     end
   end
 
 =begin rdoc
+An instruction operand. A properly-decoded instruction will have Operand
+subclasses in its <i>operands</i> array; the Operand base class is used only
+when the operand strings have been identified by the decoder but not
+processed.
 =end
   class Operand
 
 =begin rdoc
+Metadata containing additional information about the operand
 =end
     attr_accessor :flags
 
 =begin rdoc
+The size in bytes of the data referenced by the instruction, or <i>nil</i> if
+not known.
 =end
     attr_accessor :data_size
+
+=begin rdoc
+The string for the operand returned by libopcodes.
+=end
+    attr_accessor :ascii
 
 =begin rdoc
 Operand is read by instruction.
@@ -342,66 +383,96 @@ Operand is executed (jumped to) by instruction.
     FLG_INDIRECT='indirect address'
 
 =begin rdoc
+Returns the <i>ascii</i> field.
 =end
     def to_s
     end
   end
 
 =begin rdoc
+A numeric value explicitly encoded in the bytes of the instruction.
 =end
   class ImmediateOperand < Operand
 
 =begin rdoc
+The immediate value, interpreted as signed or unsigned based on whether
+Operand#flags includes FLG_SIGNED.
 =end
     attr_accessor :value
 
 =begin rdoc
+The immediate value interpreted as a signed integer.
 =end
     attr_accessor :signed
 
 =begin rdoc
+The immediate value interpreted as an unsigned integer.
 =end
     attr_accessor :unsigned
 
 =begin rdoc
+The immediate value interpreted as a VMA.
 =end
     attr_accessor :vma
   end
 
 =begin rdoc
+An address expression such as an Intel Effective Address. This generally
+takes the form of
+
+base + (index * scale) + disp
+
+where <b>base</b> and <b>index</b> are registers, <b>scale</b> is a power of
+two, <b>disp</b> is an immediate value, and <b>*</b> is a "shift operation"
+(generally arithmetic shift left).
 =end
   class AddressExpressionOperand < Operand
 
 =begin rdoc
+The shift algorithm used by the expression. This is one of SHIFT_ASL,
+SHIFT_LSL, SHIFT_LSR, SHIFT_ROR, or SHIFT_RRX. The default is SHIFT_ASL;
+the other algorithms apply to the ARM architecture.
 =end
     attr_accessor :shift
 
 =begin rdoc
+The scale factor of the expression. This must be a power of two; the default
+scale value is <b>1</b>.
 =end
     attr_accessor :scale
 
 =begin rdoc
+A Register object for the <b>index</b> value of the expression, or <i>nil</i> if
+the expression does not use an index value.
 =end
     attr_accessor :index
 
 =begin rdoc
+A Register object for the <b>base</b> value of the expression, or <i>nil</i> if
+the expression does not use an base value.
 =end
     attr_accessor :base
 
 =begin rdoc
+A numeric value or an AbsoluteAddress object for the displacement of the 
+expression, or <i>nil</i> if the expression does not use a displacement.
 =end
     attr_accessor :displacement
 
 =begin rdoc
+Logical (no carry) shift left.
 =end
     SHIFT_LSL='lsl'
 =begin rdoc
+Logical (no carry) shift right.
 =end
     SHIFT_LSR='lsr'
 =begin rdoc
+Arithmetic (carry) shift left.
 =end
     SHIFT_ASL='asl'
 =begin rdoc
+Logical (no carry) rotate right.
 =end
     SHIFT_ROR='ror'
 =begin rdoc
@@ -410,99 +481,125 @@ Operand is executed (jumped to) by instruction.
   end
 
 =begin rdoc
+A segmented address consisting of a base (segment) register and a displacement
+or offset. In Intel notation, these take the form <b>segment:offset</b>.
 =end
   class AbsoluteAddress
 
 =begin rdoc
+A Register object for the segment or base of the absolute address.
 =end
     attr_accessor :segment
 
 =begin rdoc
+An immediate value for the offset or displacement of the absolute address.
 =end
     attr_accessor :offset
   end
 
 =begin rdoc
-An absolute address operand.
+An AbsoluteAddress operand.
 
 See AbsoluteAddress class.
 =end
   class AbsoluteAddressOperand < Operand
 
-    attr_accessor :segment
+    attr_accessor :segment, :offset
 
-    attr_accessor :offset
   end
 
 =begin rdoc
+A CPU register.
 =end
   class Register
 
 =begin rdoc
+A numeric ID for the register. Registers with the same ID but different names
+are aliases of each other.
 =end
     attr_reader :id
 
 =begin rdoc
+The size of the register in bytes.
 =end
     attr_reader :size
 
 =begin rdoc
+The name or mnemonic for the register.
 =end
     attr_reader :name
 
 =begin rdoc
+Metadata describing the purpose or general use of the register.
 =end
-    attr_accessor :flags
+    attr_accessor :purpose
 
 =begin rdoc
+A general-purpose register.
 =end
     FLG_GEN='general purpose'
 =begin rdoc
+A floating-point register.
 =end
     FLG_FPU='fpu'
 =begin rdoc
+A register on the graphics card.
 =end
     FLG_GPU='gpu'
 =begin rdoc
+An SIMD register.
 =end
     FLG_SIMD='simd'
 =begin rdoc
+A system register for task management.
 =end
     FLG_TASK='task mgt'
 =begin rdoc
+A system register for memory management.
 =end
     FLG_MEM='memory mgt'
 =begin rdoc
+A system register providing debugger support.
 =end
     FLG_DBG='debug'
 =begin rdoc
+The program counter or instruction pointer.
 =end
     FLG_PC='pc'
 =begin rdoc
+The flags or condition code register.
 =end
     FLG_FLAGS='flags'
 =begin rdoc
+The stack pointer.
 =end
     FLG_STACK='stack'
 =begin rdoc
+The frame pointer.
 =end
     FLG_FRAME='stack frame'
 =begin rdoc
+A memory segment register.
 =end
     FLG_SEG='segment'
 =begin rdoc
+The (virtual) zero register.
 =end
     FLG_Z='zero'
 =begin rdoc
+A register used for incoming arguments inside a procedure.
 =end
     FLG_IN='args in'
 =begin rdoc
+A register used for outgoing arguments in a procedure call.
 =end
     FLG_OUT='args out'
 =begin rdoc
+A register used for local variables inside a procedure.
 =end
     FLG_LOCALS='locals'
 =begin rdoc
+A register used for a return value from a procedure call.
 =end
     FLG_RET='return'
   end
@@ -514,13 +611,8 @@ See Register class.
 =end
   class RegisterOperand < Operand
 
-    attr_reader :id
-
-    attr_reader :size
-
-    attr_reader :name
-
-    attr_accessor :flags
+    attr_reader :id, :size,:name
+    attr_accessor :purpose
 
     FLG_GEN='general purpose'
     FLG_FPU='fpu'

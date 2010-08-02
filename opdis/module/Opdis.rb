@@ -31,7 +31,8 @@ The args parameter is a Hash which can contain any of the following members:
   options:: Options command-line string for libopcodes. See disassembler_usage()
             in dis-asm.h for details.
 
-  arch:: 
+  arch:: The architecture to disassemble for. Use <i>arhcitectures</i> to
+         determine supported architectures.
 =end
 
   def self.new(args={})
@@ -45,7 +46,7 @@ Disassemble all bytes in a buffer. This is simply a wrapper for ext_disasm
 that provides a default value for <i>args</i>.
 See ext_disasm.
 =end
-    def disassemble( target, args={}, &block )
+    def disassemble( target, args={}, &block ) # :yields: instruction
       # Wrapper provides a default option
       ext_disassemble(target, args, &block)
     end
