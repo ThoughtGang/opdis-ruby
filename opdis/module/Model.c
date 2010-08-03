@@ -267,6 +267,11 @@ static VALUE cls_reg_init(VALUE instance) {
 	return instance;
 }
 
+static VALUE cls_reg_op_init(VALUE instance) {
+	cls_op_init(instance);
+	return cls_reg_init(instance);
+}
+
 static void init_reg_class( VALUE modOpdis ) {
 	/* Register */
 	clsReg = rb_define_class_under(modOpdis, "Register", rb_cObject);
@@ -281,7 +286,7 @@ static void init_reg_class( VALUE modOpdis ) {
 
 	/* Register Operand */
 	clsRegOp = rb_define_class_under(modOpdis, "RegisterOperand", clsOp);
-	rb_define_method(clsRegOp, "initialize", cls_reg_init, 0);
+	rb_define_method(clsRegOp, "initialize", cls_reg_op_init, 0);
 	rb_define_method(clsRegOp, "to_s", cls_generic_to_s, 0);
 	rb_define_alias(clsRegOp, REG_ATTR_NAME, GEN_ATTR_ASCII );
 
@@ -618,6 +623,7 @@ static enum opdis_op_flag_t op_flags_code( VALUE op ) {
 
 static void set_rb_op_flags( VALUE instance, enum opdis_op_flag_t val ) {
 	VALUE flags = rb_iv_get(instance, IVAR(OP_ATTR_FLAGS) );
+	
 	if ( val & opdis_op_flag_r ) {
 		rb_ary_push(flags, rb_str_new_cstr(OP_FLAG_R) );
 	}
@@ -669,6 +675,7 @@ static void op_to_c( VALUE op, opdis_op_t * dest ) {
 static VALUE op_from_c( opdis_op_t * op ) {
 	VALUE args[1] = {Qnil};
 	VALUE dest;
+
 	switch (op->category) {
 		case opdis_op_cat_register:
 			dest = reg_op_from_c(&op->value.reg); break;
