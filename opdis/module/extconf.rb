@@ -47,6 +47,9 @@ require_library('opcodes', 'init_disassemble_info')
 # ----------------------------------------------------------------------
 # OPDIS
 
+dir_config('opdis')
+
+# allow pointing to source code repo
 opdis_base=with_config('opdis')
 
 require_opdis_header('opdis/opdis.h', opdis_base)
