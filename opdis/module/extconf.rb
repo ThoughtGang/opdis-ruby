@@ -1,4 +1,5 @@
-#!/usrbin/ruby1.9
+#!/usr/bin/env ruby1.9
+# NOTE: use --with-opdis=path_to_opdis_source to set opdis location
 
 require 'mkmf'
 
@@ -46,7 +47,7 @@ require_library('opcodes', 'init_disassemble_info')
 # ----------------------------------------------------------------------
 # OPDIS
 
-opdis_base = with_config('opdis', opdis_base)
+opdis_base=with_config('opdis')
 
 require_opdis_header('opdis/opdis.h', opdis_base)
 require_opdis_header('opdis/model.h', opdis_base)

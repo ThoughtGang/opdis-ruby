@@ -1,0 +1,11 @@
+Opdis ruby extension.
+
+Requires libopdis, binutils-dev, and ruby 1.9.
+
+To set the locations of these packages, use
+
+--with-opdis=path_to_opdis_src
+
+--with-binutils-include=path_to_bfd.h
+
+--with-opcodes-include=path_to_dis-asm.h
