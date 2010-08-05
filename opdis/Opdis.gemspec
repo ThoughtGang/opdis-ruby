@@ -18,7 +18,6 @@ spec = Gem::Specification.new do |spec|
   spec.required_ruby_version = '>= 1.9.0'
   spec.requirements = [ 'opdis library and headers',
                         'GNU binutils library and headers' ]
-  spec.add_dependency('BFD', '>= 1.0.4')
 
   spec.files = Dir['module/*.c', 'module/*.h', 'examples/*.rb']
   spec.extra_rdoc_files = Dir['module/rdoc_input/*.rb']

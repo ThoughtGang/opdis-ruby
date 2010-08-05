@@ -35,9 +35,55 @@ static VALUE clsBfdTgt = Qnil;
 static VALUE clsBfdSec = Qnil;
 static VALUE clsBfdSym = Qnil;
 
-#define GET_BFD_CLASS(cls,name) (cls = cls == Qnil ? rb_path2class(name) : cls)
+#define GET_BFD_CLASS(cls,name) (cls = cls == Qnil ? path2class(name) : cls)
 
 #define ALLOC_FIXED_INSN opdis_insn_alloc_fixed(128, 32, 16, 32)
+
+/* ---------------------------------------------------------------------- */
+/* rb_path2class from variable.c reimplemented to NOT throw exceptions
+ * when a class isn't found. */
+static VALUE path2class(const char * path) {
+	const char *pbeg, *p;
+	ID id;
+	VALUE c = rb_cObject;
+
+	pbeg = p = path;
+
+	if (path[0] == '#') {
+		rb_raise(rb_eArgError, "can't retrieve anonymous class %s", 
+			 path);
+	}
+
+	while (*p) {
+		while (*p && *p != ':') p++;
+		id = rb_intern2(pbeg, p-pbeg);
+		if (p[0] == ':') {
+			if (p[1] != ':') {
+				rb_raise(rb_eArgError, 
+					 "undefined class/module %.*s", 
+					 (int)(p-path), path);
+			}
+			p += 2;
+			pbeg = p;
+		}
+
+		if (!rb_const_defined(c, id)) {
+			return Qnil;
+		}
+
+		c = rb_const_get_at(c, id);
+		switch (TYPE(c)) {
+			case T_MODULE:
+			case T_CLASS:
+			break;
+			default:
+			rb_raise(rb_eTypeError, 
+				 "%s does not refer to class/module", path);
+			}
+		}
+
+	return c;
+}
 
 /* ---------------------------------------------------------------------- */
 /* Disasm Output Class */
