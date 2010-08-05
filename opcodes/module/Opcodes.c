@@ -8,6 +8,10 @@
 #include <dis-asm.h>
 #include <ruby.h>
 
+#ifndef RUBY_19
+#include <stdarg.h>
+#endif
+
 #include "Opcodes.h"
 
 #define IVAR(attr) "@" attr
