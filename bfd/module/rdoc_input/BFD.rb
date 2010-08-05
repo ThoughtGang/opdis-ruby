@@ -261,6 +261,6 @@ Create a new Bfd::Target object for <i>target</i>, which can be a String
 containing a file path, or an IO object for an already-loaded file.
 Currently no options are supported via args.
 =end
-    def initialize(target, args)
+    def initialize(target, args) # :yields: bfd
     end
 end

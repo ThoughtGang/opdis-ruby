@@ -8,6 +8,10 @@
 #include <bfd.h>
 #include <ruby.h>
 
+#ifndef RUBY_19
+#include <stdarg.h>
+#endif
+
 #include "BFD.h"
 
 #define IVAR(attr) "@" attr
