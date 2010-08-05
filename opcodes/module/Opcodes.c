@@ -8,9 +8,7 @@
 #include <dis-asm.h>
 #include <ruby.h>
 
-#ifndef RUBY_19
-#include "ruby1.8_compat.h"
-#endif
+#include "ruby_compat.h"
 
 #include "Opcodes.h"
 
@@ -370,25 +368,33 @@ static VALUE disasm_insn( struct disassemble_info * info, bfd_vma vma,
 			  unsigned int * length ) {
 	disassembler_ftype fn;
 	int size;
+printf("IN\n");
+{
 	VALUE ary = rb_ary_new();
 	VALUE hash = rb_hash_new();
+printf("A\n");
 
 	if ( vma < info->buffer_vma ) {
 		/* assume small VMAs are offsets into buffer */
 		vma += info->buffer_vma;
 	}
 
+printf("B\n");
 	if ( vma >= info->buffer_vma + info->buffer_length) {
 		rb_raise(rb_eArgError, "VMA %d exceeds buffer length", 
 			 (int) vma);
 	}
 
+printf("C\n");
 	/* prepare info for insn disassmbly */
 	info->insn_info_valid = 0;
+printf("D\n");
 	info->stream = (void *) ary;
 
+printf("E\n");
 	/* invoke disassembly */
 	fn = (disassembler_ftype) info->application_data;
+printf("F\n");
 	size = fn( vma, info );
 
 	/* increase # bytes disassembled */
@@ -396,13 +402,20 @@ static VALUE disasm_insn( struct disassemble_info * info, bfd_vma vma,
 		*length += size;
 	}
 
+printf("G\n");
 	/* fill output hash */
 	rb_hash_aset( hash, str_to_sym(DIS_INSN_VMA), INT2NUM(vma) );
+printf("H\n");
 	rb_hash_aset( hash, str_to_sym(DIS_INSN_SIZE), INT2NUM(size) );
+printf("I\n");
 	rb_hash_aset( hash, str_to_sym(DIS_INSN_INFO), disasm_insn_info(info) );
+printf("J\n");
 	rb_hash_aset( hash, str_to_sym(DIS_INSN_INSN), rb_ary_dup(ary) );
 
+printf("K\n");
 	return hash;
+}
+printf("OUT\n");
 }
 
 /* support for different target types */
@@ -488,7 +501,7 @@ static void load_target( VALUE tgt, struct disasm_target * dest ) {
 		dest->ruby_manages_buf = 1;
 
 	} else if ( Qtrue == rb_obj_is_kind_of( tgt, 
-	      				rb_path2class("Bfd::Section") ) ) {
+	      				path2class("Bfd::Section") ) ) {
 		/* BFD Section */
 		Data_Get_Struct(tgt, asection, dest->sec);
 		if ( dest->sec ) {
@@ -499,7 +512,7 @@ static void load_target( VALUE tgt, struct disasm_target * dest ) {
 		}
 
 	} else if ( Qtrue == rb_obj_is_kind_of( tgt, 
-	      				rb_path2class("Bfd::Symbol") ) ) {
+	      				path2class("Bfd::Symbol") ) ) {
 		/* BFD Symbol */
 		Data_Get_Struct(tgt, asymbol, dest->sym);
 		if ( dest->sym ) {
@@ -631,7 +644,7 @@ static VALUE cls_disasm_new(VALUE class, VALUE hash) {
 	var = rb_hash_lookup(hash, str_to_sym(DIS_ARG_BFD));
 	if ( var != Qnil) {
 		if ( Qtrue == rb_obj_is_kind_of( var, 
-			      rb_path2class("Bfd::Target") ) ) {
+			      path2class("Bfd::Target") ) ) {
 			bfd * abfd;
 			/* nasty nasty! touching other peoples' privates! */
 			Data_Get_Struct(var, bfd, abfd);
@@ -657,7 +670,7 @@ static void init_disasm_class( VALUE modOpcodes ) {
 	clsDisasm = rb_define_class_under(modOpcodes, DIS_CLASS_NAME,
 					  rb_cObject);
 	/* class methods */
-	rb_define_singleton_method(clsDisasm, "new", cls_disasm_new, 1);
+	rb_define_singleton_method(clsDisasm, "ext_new", cls_disasm_new, 1);
 	rb_define_singleton_method(clsDisasm, DIS_METHOD_ARCH, cls_disasm_arch,
 				   0);
 	
