@@ -128,9 +128,7 @@ static VALUE cls_output_contain( VALUE instance, VALUE vma ) {
 	return Qfalse;
 }
 
-static VALUE cls_output_new( VALUE class ) {
-	VALUE args[1] = {Qnil};
-	VALUE instance = rb_class_new_instance(0, args, clsOutput);
+static VALUE cls_output_init( VALUE instance ) {
 	rb_iv_set(instance, IVAR(OUT_ATTR_ERRORS), rb_ary_new() );
 	return instance;
 }
@@ -138,7 +136,7 @@ static VALUE cls_output_new( VALUE class ) {
 static void init_output_class( VALUE modOpdis ) {
 	clsOutput = rb_define_class_under(modOpdis, OPDIS_OUTPUT_CLASS_NAME, 
 					  rb_cHash);
-	rb_define_singleton_method(clsOutput, "new", cls_output_new, 0);
+	rb_define_method(clsOutput, "initialize", cls_output_init, 0);
 
 	/* read-only attribute for error list */
 	rb_define_attr(clsOutput, OUT_ATTR_ERRORS, 1, 0);
@@ -225,6 +223,9 @@ static int local_decoder( const opdis_insn_buf_t in, opdis_insn_t * out,
 
 	/* invoke decode method in Decoder object */
 	VALUE var = rb_funcall(obj, symDecode, 2, insn, hash);
+
+	/* Move info back to C domain */
+	Opdis_insnToC( insn, out );
 
 	return (Qfalse == var || Qnil == var) ? 0 : 1;
 }
@@ -487,7 +488,7 @@ static void local_display( const opdis_insn_t * i, void * arg ) {
 static void local_error( enum opdis_error_t error, const char * msg,
                          void * arg ) {
 	const char * type;
-	char buf[128];
+	char buf[128] = {0};
 	VALUE errors = (VALUE) arg;
 
 	switch (error) {
@@ -500,7 +501,7 @@ static void local_error( enum opdis_error_t error, const char * msg,
 		default: type = DIS_ERR_UNK; break;
 	}
 
-	snprintf( buf, 127-1, "%s: %s", type, msg );
+	snprintf( buf, 128-1, "%s: %s", type, msg );
 
 	/* append error message to error list */
 	rb_ary_push( errors, rb_str_new_cstr(buf) );

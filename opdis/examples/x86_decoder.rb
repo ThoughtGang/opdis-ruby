@@ -11,7 +11,9 @@ require 'Opdis'
 class CustomX86Decoder < Opdis::X86Decoder
 
   def decode(insn, hash)
-    # TODO
+    # Invoke built-in X86 AT&T instruction decoder
+    super(insn, hash)
+    # TODO: something interesting
   end
 
 end
@@ -20,7 +22,7 @@ end
 # print an instruction in the standard disasm listing format:
 #       VMA 8_hex_bytes instruction
 def print_insn(insn)
-  hex_str = insn.bytes.collect { |b| "%02X" % b }.join(' ')
+  hex_str = insn.bytes.bytes.collect { |b| "%02X" % b }.join(' ')
   puts "%08X %-23.23s %s" % [ insn.vma, hex_str, insn.ascii ]
 end
 

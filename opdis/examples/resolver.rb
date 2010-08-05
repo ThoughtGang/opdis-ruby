@@ -10,7 +10,7 @@ require 'Opdis'
 class Opdis::ImmediateOperand
   # return immediate operand value
   def resolve( ign )
-    return self.vma
+    return @vma
   end
 end
 
@@ -44,7 +44,8 @@ class Opdis::RegisterOperand
 end
 
 # ----------------------------------------------------------------------
-class CustomResolver < Opdis::AddressResolver
+include Opdis
+class CustomResolver < AddressResolver
   attr_reader :registers  # reg name -> value
   attr_reader :stack      # array of pushed values
   attr_reader :stack_ptr  # index (into @stack) of 'top' of stack
@@ -131,16 +132,16 @@ class CustomResolver < Opdis::AddressResolver
   end
 
   INSN_HANDLERS = [
-    [CAT_CFLOW, FLG_CALL, :call],
-    [CAT_CFLOW, FLG_CALL_CC, :call],
-    [CAT_CFLOW, FLG_RET, :ret],
-    [CAT_STACK, FLG_PUSH, :push],
-    [CAT_STACK, FLG_POP, :pop],
-    [CAT_STACK, FLG_FRAME, :frame],
-    [CAT_STACK, FLG_UNFRAME, :unframe],
-    [CAT_MATH, FLG_ADD, :add],
-    [CAT_MATH, FLG_SUB, :sub],
-    [CAT_LOADSTORE, nil, :lost]
+    [Instruction::CAT_CFLOW, Instruction::FLG_CALL, :call],
+    [Instruction::CAT_CFLOW, Instruction::FLG_CALLCC, :call],
+    [Instruction::CAT_CFLOW, Instruction::FLG_RET, :ret],
+    [Instruction::CAT_STACK, Instruction::FLG_PUSH, :push],
+    [Instruction::CAT_STACK, Instruction::FLG_POP, :pop],
+    [Instruction::CAT_STACK, Instruction::FLG_FRAME, :frame],
+    [Instruction::CAT_STACK, Instruction::FLG_UNFRAME, :unframe],
+    #[Instruction::CAT_MATH, Instruction::FLG_ADD, :add],
+    #[Instruction::CAT_MATH, Instruction::FLG_SUB, :sub],
+    [Instruction::CAT_LOADSTORE, nil, :lost]
   ]
 
   # Modify stack/insn contents based on insn
@@ -159,7 +160,7 @@ end
 # print an instruction in the standard disasm listing format:
 #       VMA 8_hex_bytes instruction
 def print_insn(insn)
-  hex_str = insn.bytes.collect { |b| "%02X" % b }.join(' ')
+  hex_str = insn.bytes.bytes.collect { |b| "%02X" % b }.join(' ')
   puts "%08X %-23.23s %s" % [ insn.vma, hex_str, insn.ascii ]
 end
 
@@ -168,14 +169,14 @@ def disasm_entry( tgt )
   # custom resolver to use in disassembler
   vm = CustomResolver.new
 
-  Opdis::Disassembler.new( resolver: vm ) do |dis|
+  Disassembler.new( resolver: vm ) do |dis|
 
     dis.disasm_entry( tgt ) do |insn|
       # Set register/stack contents based on insn
       vm.process(insn)
 
     # Print instructions in order of VMA
-    end.values.sort_by( |i| i.vma ).each { |i| print_insn(i) }
+    end.values.sort_by{ |i| i.vma }.each { |i| print_insn(i) }
   end
 end
 

@@ -51,7 +51,7 @@ static void fill_decoder_hash( VALUE hash, const opdis_insn_buf_t in,
                                const opdis_byte_t * buf, opdis_off_t offset,
                                opdis_vma_t vma, opdis_off_t length ) {
 	int i;
-	VALUE ary;
+	VALUE str, ary;
 	char info = in->insn_info_valid;
 
 	/* instruction location and size */
@@ -60,8 +60,8 @@ static void fill_decoder_hash( VALUE hash, const opdis_insn_buf_t in,
 	rb_hash_aset( hash, str_to_sym(DECODER_MEMBER_LEN), INT2NUM(length) );
 
 	/* target buffer */
-	rb_hash_aset( hash, str_to_sym(DECODER_MEMBER_BUF), 
-		      rb_str_new( (const char *) buf, offset + length ) );
+	str = rb_str_new( (const char *) buf, offset + length );
+	rb_hash_aset( hash, str_to_sym(DECODER_MEMBER_BUF), str );
 	
 	/* decode instruction as provided by libopcodes */
 
@@ -119,8 +119,11 @@ static int invoke_builtin_decoder( OPDIS_DECODER fn, VALUE insn, VALUE hash ) {
 	length = ( Qfalse != var ) ? NUM2UINT(var) : 0;
 
 	var = rb_hash_lookup2(hash, str_to_sym(DECODER_MEMBER_BUF), Qfalse);
-	buf = ( Qfalse != var ) ? (opdis_byte_t *) RSTRING_PTR(buf) : NULL;
-	// TODO: error message or exception on NULL
+	buf = ( Qfalse != var ) ? (opdis_byte_t *) RSTRING_PTR(var) : NULL;
+
+	if ( buf == NULL ) {
+		rb_raise( rb_eRuntimeError, "DecodeHash.buf is NULL" );
+	}
 
 	/* invoke C decoder callback */
 	// TODO: pass something meaningful in arg

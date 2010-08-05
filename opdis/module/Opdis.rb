@@ -2,7 +2,6 @@
 # Copyright 2010 Thoughtgang <http://www.thoughtgang.org>
 # Ruby additions to the Opdis module
 
-require 'BFD'
 require 'OpdisExt'
 require 'tempfile'    # for Disassembler#options
 

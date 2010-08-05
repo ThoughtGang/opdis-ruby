@@ -574,12 +574,16 @@ static VALUE imm_op_from_c( opdis_op_t * op ) {
 		return var;
 	}
 
-	rb_iv_set(var, IVAR(IMM_ATTR_VMA), op->value.immediate.vma );
-	rb_iv_set(var, IVAR(IMM_ATTR_SIGNED), op->value.immediate.s );
-	rb_iv_set(var, IVAR(IMM_ATTR_UNSIGNED), op->value.immediate.u );
+	rb_iv_set(var, IVAR(IMM_ATTR_VMA), 
+		  ULL2NUM(op->value.immediate.vma) );
+	rb_iv_set(var, IVAR(IMM_ATTR_SIGNED), 
+		  LL2NUM(op->value.immediate.s) );
+	rb_iv_set(var, IVAR(IMM_ATTR_UNSIGNED), 
+		  ULL2NUM(op->value.immediate.u) );
 	rb_iv_set(var, IVAR(IMM_ATTR_VAL), 
 		  (op->flags & opdis_op_flag_signed) ?
-			op->value.immediate.s : op->value.immediate.u );
+			LL2NUM(op->value.immediate.s) : 
+			ULL2NUM(op->value.immediate.u) );
 	return var;
 }
 
@@ -686,8 +690,8 @@ static VALUE op_from_c( opdis_op_t * op ) {
 		case opdis_op_cat_expr:
 			dest = addrexpr_op_from_c(&op->value.expr); break;
 		case opdis_op_cat_unknown:
+		default:
 			dest = rb_class_new_instance(0, args, clsOp);
-		default: break;
 	}
 
 	if ( dest == Qnil ) {
@@ -1042,6 +1046,7 @@ static void insn_to_c( VALUE insn, opdis_insn_t * dest ) {
 static VALUE get_aliased_operand( VALUE instance, const char * alias ) {
 	VALUE idx = rb_iv_get(instance, alias);
 	VALUE ops = rb_iv_get(instance, IVAR(INSN_ATTR_OPERANDS) );
+
 	return (idx == Qnil) ? idx : rb_ary_entry(ops, NUM2LONG(idx));
 }
 

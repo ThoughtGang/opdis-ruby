@@ -13,15 +13,15 @@ class CustomTracker < Opdis::VisitedAddressTracker
   attr_reader :visited_addresses
 
   def initialize()
-    visited_addresses = {}
+    @visited_addresses = {}
   end
 
   def visited?( insn )
-    return visited_addresses.fetch(insn.vma, false)
+    return @visited_addresses.fetch(insn.vma, false)
   end
 
   def visit( insn )
-    visited_addresses[insn.vma] = true
+    @visited_addresses[insn.vma] = true
   end
 
 end
@@ -30,7 +30,7 @@ end
 # print an instruction in the standard disasm listing format:
 #       VMA 8_hex_bytes instruction
 def print_insn(insn)
-  hex_str = insn.bytes.collect { |b| "%02X" % b }.join(' ')
+  hex_str = insn.bytes.bytes.collect { |b| "%02X" % b }.join(' ')
   puts "%08X %-23.23s %s" % [ insn.vma, hex_str, insn.ascii ]
 end
 
@@ -46,7 +46,7 @@ def disasm_entry( tgt )
       tracker.visit(insn)
 
     # Print instructions in order of VMA
-    end.values.sort_by( |i| i.vma ).each { |i| print_insn(i) }
+    end.values.sort_by{ |i| i.vma }.each { |i| print_insn(i) }
   end
 end
 
