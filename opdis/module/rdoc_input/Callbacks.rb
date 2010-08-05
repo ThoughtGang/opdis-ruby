@@ -59,9 +59,11 @@ This is not always set by libopcodes.
 InstructionDecoder#decode will invoke opdis_default_decoder to fill
 architecture-independent members such as Instruction#vma and Instruction#ascii.
 
-The return value of this method is ignored.
+This method must return success or failure. Failure will result in an 
+error message being added to Disassembly.errors.
 =end
     def decode( insn, hash )
+      true
     end
 
   end
@@ -77,6 +79,7 @@ See InstructionDecoder#decode.
 This will invoke opdis default x86 decoder with AT&T syntax.
 =end
     def decode( insn, hash )
+      true
     end
 
   end
@@ -92,6 +95,7 @@ See InstructionDecoder#decode.
 This will invoke opdis default x86 decoder with Intel syntax.
 =end
     def decode( insn, hash )
+      true
     end
 
   end
