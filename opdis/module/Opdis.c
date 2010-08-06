@@ -9,9 +9,7 @@
 #include <string.h>
 
 #include <ruby.h>
-#ifndef RUBY_19
-#include <ruby1.8_compat.h>
-#endif
+#include "ruby_compat.h"
 
 #include <opdis/opdis.h>
 
@@ -31,7 +29,7 @@ static VALUE modOpdis;
 
 static VALUE str_to_sym( const char * str ) {
 	VALUE var = rb_str_new_cstr(str);
-	return rb_funcall(var, symToSym, 0);
+	return (var == Qnil) ? Qnil : rb_funcall(var, symToSym, 0);
 }
 
 /* BFD Support (requires BFD gem) */
@@ -43,51 +41,6 @@ static VALUE clsBfdSym = Qnil;
 
 #define ALLOC_FIXED_INSN opdis_insn_alloc_fixed(128, 32, 16, 32)
 
-/* ---------------------------------------------------------------------- */
-/* rb_path2class from variable.c reimplemented to NOT throw exceptions
- * when a class isn't found. */
-static VALUE path2class(const char * path) {
-	const char *pbeg, *p;
-	ID id;
-	VALUE c = rb_cObject;
-
-	pbeg = p = path;
-
-	if (path[0] == '#') {
-		rb_raise(rb_eArgError, "can't retrieve anonymous class %s", 
-			 path);
-	}
-
-	while (*p) {
-		while (*p && *p != ':') p++;
-		id = rb_intern2(pbeg, p-pbeg);
-		if (p[0] == ':') {
-			if (p[1] != ':') {
-				rb_raise(rb_eArgError, 
-					 "undefined class/module %.*s", 
-					 (int)(p-path), path);
-			}
-			p += 2;
-			pbeg = p;
-		}
-
-		if (!rb_const_defined(c, id)) {
-			return Qnil;
-		}
-
-		c = rb_const_get_at(c, id);
-		switch (TYPE(c)) {
-			case T_MODULE:
-			case T_CLASS:
-			break;
-			default:
-			rb_raise(rb_eTypeError, 
-				 "%s does not refer to class/module", path);
-			}
-		}
-
-	return c;
-}
 
 /* ---------------------------------------------------------------------- */
 /* Disasm Output Class */
@@ -237,6 +190,9 @@ static int local_decoder( const opdis_insn_buf_t in, opdis_insn_t * out,
 static VALUE cls_disasm_set_decoder(VALUE instance, VALUE obj) {
 	opdis_t  opdis;
 	Data_Get_Struct(instance, opdis_info_t, opdis);
+	if (! opdis ) {
+		rb_raise( rb_eRuntimeError, "Invalid opdis_t" );
+	}
 
 	/* 'nil' causes opdis to revert to default decoder */
 	if ( Qnil == obj ) {
@@ -271,6 +227,9 @@ static int local_handler( const opdis_insn_t * i, void * arg ) {
 static VALUE cls_disasm_set_handler(VALUE instance, VALUE obj) {
 	opdis_t  opdis;
 	Data_Get_Struct(instance, opdis_info_t, opdis);
+	if (! opdis ) {
+		rb_raise( rb_eRuntimeError, "Invalid opdis_t" );
+	}
 
 	/* nil causes opdis to revert to default decoder */
 	if ( Qnil == obj ) {
@@ -304,6 +263,9 @@ static opdis_vma_t local_resolver ( const opdis_insn_t * i, void * arg ) {
 static VALUE cls_disasm_set_resolver(VALUE instance, VALUE obj) {
 	opdis_t  opdis;
 	Data_Get_Struct(instance, opdis_info_t, opdis);
+	if (! opdis ) {
+		rb_raise( rb_eRuntimeError, "Invalid opdis_t" );
+	}
 
 	/* nil causes opdis to revert to default resolver */
 	if ( Qnil == obj ) {
@@ -325,12 +287,15 @@ static VALUE cls_disasm_set_resolver(VALUE instance, VALUE obj) {
 static VALUE cls_disasm_get_debug(VALUE instance) {
 	opdis_t  opdis;
 	Data_Get_Struct(instance, opdis_info_t, opdis);
-	return opdis->debug ? Qtrue : Qfalse;
+	return (opdis && opdis->debug) ? Qtrue : Qfalse;
 }
 
 static VALUE cls_disasm_set_debug(VALUE instance, VALUE enabled) {
 	opdis_t  opdis;
 	Data_Get_Struct(instance, opdis_info_t, opdis);
+	if (! opdis ) {
+		rb_raise( rb_eRuntimeError, "Invalid opdis_t" );
+	}
 	opdis->debug = (enabled == Qtrue) ? 1 : 0;
 	return Qtrue;
 }
@@ -340,6 +305,9 @@ static VALUE cls_disasm_get_syntax(VALUE instance) {
 	VALUE str;
 
 	Data_Get_Struct(instance, opdis_info_t, opdis);
+	if (! opdis ) {
+		rb_raise( rb_eRuntimeError, "Invalid opdis_t" );
+	}
 
 	if ( opdis->disassembler == print_insn_i386_intel ) {
 		str = rb_str_new_cstr(DIS_SYNTAX_INTEL);
@@ -365,6 +333,9 @@ static VALUE cls_disasm_set_syntax(VALUE instance, VALUE syntax) {
 	}
 
 	Data_Get_Struct(instance, opdis_info_t, opdis);
+	if (! opdis ) {
+		rb_raise( rb_eRuntimeError, "Invalid opdis_t" );
+	}
 	opdis_set_x86_syntax(opdis, syn);
 
 	return Qtrue;
@@ -376,6 +347,9 @@ static VALUE cls_disasm_get_arch(VALUE instance) {
 	int num_defs = sizeof(arch_definitions) / sizeof(struct arch_def);
 
 	Data_Get_Struct(instance, opdis_info_t, opdis);
+	if (! opdis ) {
+		rb_raise( rb_eRuntimeError, "Invalid opdis_t" );
+	}
 
 	for ( i = 0; i < num_defs; i++ ) {
 		struct arch_def *def = &arch_definitions[i];
@@ -396,6 +370,9 @@ static VALUE cls_disasm_set_arch(VALUE instance, VALUE arch) {
 	const char * name = rb_string_value_cstr(&arch);
 
 	Data_Get_Struct(instance, opdis_info_t, opdis);
+	if (! opdis ) {
+		rb_raise( rb_eRuntimeError, "Invalid opdis_t" );
+	}
 	info = &opdis->config;
 
 	info->application_data = arch_definitions[0].fn;
@@ -419,7 +396,8 @@ static VALUE cls_disasm_set_arch(VALUE instance, VALUE arch) {
 static VALUE cls_disasm_get_opts(VALUE instance) {
 	opdis_t  opdis;
 	Data_Get_Struct(instance, opdis_info_t, opdis);
-	return rb_str_new_cstr(opdis->config.disassembler_options);
+	return (opdis == NULL) ? Qnil : 
+		rb_str_new_cstr(opdis->config.disassembler_options);
 }
 
 static VALUE cls_disasm_set_opts(VALUE instance, VALUE opts) {
@@ -427,6 +405,9 @@ static VALUE cls_disasm_set_opts(VALUE instance, VALUE opts) {
 	opdis_t  opdis;
 	VALUE opts_s = opts;
 	Data_Get_Struct(instance, opdis_info_t, opdis);
+	if (! opdis ) {
+		rb_raise( rb_eRuntimeError, "Invalid opdis_t" );
+	}
 
 	str = StringValueCStr(opts_s);
 	opdis_set_disassembler_options( opdis, str );
@@ -576,22 +557,27 @@ static void load_target( opdis_t opdis, VALUE tgt, VALUE hash,
 	if ( Qnil != GET_BFD_CLASS(clsBfdTgt, BFD_TGT_PATH) &&
 	     Qtrue == rb_obj_is_kind_of( tgt, clsBfdTgt ) ) {
 		Data_Get_Struct(tgt, bfd, out->abfd );
+		if (! out->abfd ) {
+			rb_raise( rb_eRuntimeError, "Invalid bfd" );
+		}
 	
 	/* Ruby Bfd::Symbol object */
 	} else if ( Qnil != GET_BFD_CLASS(clsBfdSym, BFD_SYM_PATH) &&
 	     Qtrue == rb_obj_is_kind_of( tgt, clsBfdSym ) ) {
 		Data_Get_Struct(tgt, asymbol, out->sym );
-		if ( out->sym ) {
-			out->abfd = out->sym->the_bfd;
+		if (! out->sym ) {
+			rb_raise( rb_eRuntimeError, "Invalid bfd symbol" );
 		}
+		out->abfd = out->sym->the_bfd;
 
 	/* Ruby Bfd::Section object */
 	} else if ( Qnil != GET_BFD_CLASS(clsBfdSec, BFD_SEC_PATH) &&
 	     Qtrue == rb_obj_is_kind_of( tgt, clsBfdSec ) ) {
 		Data_Get_Struct(tgt, asection, out->sec );
-		if ( out->sec ) {
-			out->abfd = out->sec->owner;
+		if (! out->sec ) {
+			rb_raise( rb_eRuntimeError, "Invalid bfd section" );
 		}
+		out->abfd = out->sec->owner;
 
 	/* Other non-Bfd Ruby object */
 	} else {
@@ -628,6 +614,7 @@ static void perform_disassembly( VALUE instance, opdis_t opdis, VALUE target,
 
 	rb_thread_schedule();
 
+	// Disable garbage collection
 	// TODO: INVESTIGATE why without this, ruby crashes!
 	rb_gc_disable();
 
@@ -693,7 +680,8 @@ static void perform_disassembly( VALUE instance, opdis_t opdis, VALUE target,
 		opdis_buf_free(tgt.buf);
 	}
 
-	// See above TODO
+	// Enable garbage collection
+	// TODO: INVESTIGATE why ruby needs gc disable/enable
 	rb_gc_enable();
 }
 
@@ -706,10 +694,12 @@ static VALUE cls_disasm_disassemble(VALUE instance, VALUE tgt, VALUE hash ) {
 
 	/* Create duplicate opdis_t in order to be threadsafe */
 	Data_Get_Struct(instance, opdis_info_t, opdis_orig);
+	if (! opdis_orig ) {
+		rb_raise( rb_eRuntimeError, "Invalid opdis_t" );
+	}
 	opdis = opdis_dupe(opdis_orig);
 
-	// TODO: block should also return Disassembly
-	/* yielding to a block is easy */
+	/* yield to a block, if provided */
 	if ( rb_block_given_p() ) {
 		display_args.block = rb_block_proc();
 	}

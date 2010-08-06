@@ -6,9 +6,7 @@
  */
 
 #include <ruby.h>
-#ifndef RUBY_19
-#include <ruby1.8_compat.h>
-#endif
+#include "ruby_compat.h"
 
 #include <opdis/model.h>
 

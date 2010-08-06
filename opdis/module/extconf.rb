@@ -58,5 +58,15 @@ require_opdis_header('opdis/metadata.h', opdis_base)
 require_opdis_library('opdis', 'opdis_init', opdis_base)
 
 # ----------------------------------------------------------------------
+# Compatibility flags
+
+if RUBY_VERSION =~ /1.8/ then
+        $CPPFLAGS += " -DRUBY_18"
+elsif RUBY_VERSION =~ /1.9/ then
+        $CPPFLAGS += " -DRUBY_19"
+end
+
+# ----------------------------------------------------------------------
 # Makefile
+
 create_makefile('OpdisExt')
