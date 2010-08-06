@@ -368,33 +368,25 @@ static VALUE disasm_insn( struct disassemble_info * info, bfd_vma vma,
 			  unsigned int * length ) {
 	disassembler_ftype fn;
 	int size;
-printf("IN\n");
-{
 	VALUE ary = rb_ary_new();
 	VALUE hash = rb_hash_new();
-printf("A\n");
 
 	if ( vma < info->buffer_vma ) {
 		/* assume small VMAs are offsets into buffer */
 		vma += info->buffer_vma;
 	}
 
-printf("B\n");
 	if ( vma >= info->buffer_vma + info->buffer_length) {
 		rb_raise(rb_eArgError, "VMA %d exceeds buffer length", 
 			 (int) vma);
 	}
 
-printf("C\n");
 	/* prepare info for insn disassmbly */
 	info->insn_info_valid = 0;
-printf("D\n");
 	info->stream = (void *) ary;
 
-printf("E\n");
 	/* invoke disassembly */
 	fn = (disassembler_ftype) info->application_data;
-printf("F\n");
 	size = fn( vma, info );
 
 	/* increase # bytes disassembled */
@@ -402,20 +394,13 @@ printf("F\n");
 		*length += size;
 	}
 
-printf("G\n");
 	/* fill output hash */
 	rb_hash_aset( hash, str_to_sym(DIS_INSN_VMA), INT2NUM(vma) );
-printf("H\n");
 	rb_hash_aset( hash, str_to_sym(DIS_INSN_SIZE), INT2NUM(size) );
-printf("I\n");
 	rb_hash_aset( hash, str_to_sym(DIS_INSN_INFO), disasm_insn_info(info) );
-printf("J\n");
 	rb_hash_aset( hash, str_to_sym(DIS_INSN_INSN), rb_ary_dup(ary) );
 
-printf("K\n");
 	return hash;
-}
-printf("OUT\n");
 }
 
 /* support for different target types */
@@ -560,7 +545,10 @@ static void disasm_init( struct disassemble_info * info,
 
 	/* libopcodes disassembler options */
 	var = rb_iv_get(class, IVAR(DIS_ATTR_OPTIONS));
-	info->disassembler_options = StringValueCStr( var );
+	if ( var != Qnil ) {
+		// TODO: why does this crash 1.8 ?
+		//info->disassembler_options = StringValueCStr( var );
+	}
 }
 
 /* disassemble a single instruction */
@@ -571,6 +559,9 @@ static VALUE cls_disasm_single(VALUE class, VALUE tgt, VALUE hash) {
 	VALUE result;
 
 	Data_Get_Struct(class, struct disassemble_info, info);
+	if (! info ) {
+		rb_raise( rb_eRuntimeError, "Invalid disassemble_info" );
+	}
 
 	disasm_init( info, &target, &vma, class, tgt, hash );
 
@@ -590,6 +581,9 @@ static VALUE cls_disasm_dis(VALUE class, VALUE tgt, VALUE hash) {
 	VALUE ary;
 
 	Data_Get_Struct(class, struct disassemble_info, info);
+	if (! info ) {
+		rb_raise( rb_eRuntimeError, "Invalid disassemble_info" );
+	}
 
 	disasm_init( info, &target, &vma, class, tgt, hash );
 

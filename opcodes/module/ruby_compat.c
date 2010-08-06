@@ -14,53 +14,8 @@ VALUE Opcodes_rb_hash_lookup2( VALUE hash, VALUE key, VALUE def ) {
 	return (v == Qnil) ? def : v;
 }
 
-
-VALUE Opcodes_path2class(const char * path) {
-	const char *pbeg, *p;
-	ID id;
-	VALUE c = rb_cObject;
-
-	if (path[0] == '#') {
-		rb_raise(rb_eArgError, "can't retrieve anonymous class %s", 
-			 path);
-	}
-	pbeg = p = path;
-
-	while (*p) {
-		VALUE str;
-
-		while (*p && *p != ':') p++;
-		str = rb_str_new(pbeg, p-pbeg);
-		id = rb_intern(RSTRING(str)->ptr);
-		if (p[0] == ':') {
-			if (p[1] != ':') {
-				rb_raise(rb_eArgError, 
-					 "undefined class/module %.*s", 
-					 p-path, path);
-			}
-			p += 2;
-			pbeg = p;
-		}
-		if (!rb_const_defined(c, id)) {
-			return Qnil;
-		}
-		c = rb_const_get_at(c, id);
-		switch (TYPE(c)) {
-			case T_MODULE:
-			case T_CLASS:
-				break;
-			default:
-				rb_raise(rb_eTypeError, 
-					"%s does not refer class/module", path);
-		}
-	}
-
-	return c;
-}
-
 #endif
 
-#ifdef RUBY_19
 /* ---------------------------------------------------------------------- */
 /* rb_path2class from variable.c reimplemented to NOT throw exceptions
  * when a class isn't found. */
@@ -77,8 +32,17 @@ VALUE Opcodes_path2class(const char * path) {
 	}
 
 	while (*p) {
+#ifdef RUBY_18
+		VALUE str;
+		while (*p && *p != ':') p++;
+		str = rb_str_new(pbeg, p-pbeg);
+		id = rb_intern(RSTRING(str)->ptr);
+#endif
+
+#ifdef RUBY_19
 		while (*p && *p != ':') p++;
 		id = rb_intern2(pbeg, p-pbeg);
+#endif
 		if (p[0] == ':') {
 			if (p[1] != ':') {
 				rb_raise(rb_eArgError, 
@@ -106,4 +70,3 @@ VALUE Opcodes_path2class(const char * path) {
 
 	return c;
 }
-#endif
