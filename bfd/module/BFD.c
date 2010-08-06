@@ -6,11 +6,9 @@
  */
 
 #include <bfd.h>
-#include <ruby.h>
 
-#ifndef RUBY_19
-#include "ruby1.8_compat.h"
-#endif
+#include <ruby.h>
+#include "ruby_compat.h"
 
 #include "BFD.h"
 
