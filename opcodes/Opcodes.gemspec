@@ -3,7 +3,7 @@
 require 'rubygems'
 spec = Gem::Specification.new do |spec|
   spec.name = 'Opcodes'
-  spec.version = '1.0.8'
+  spec.version = '1.1.0'
   spec.summary = 'Ruby extension library providing an API to GNU libopcodes'
   spec.description = %{Libopcodes is the disassembler library used by
   GNU binutils. This extension provides access to libopcodes for Ruby
@@ -14,7 +14,7 @@ spec = Gem::Specification.new do |spec|
   spec.homepage = 'http://rubyforge.org/projects/opdis/'
   spec.rubyforge_project = 'opdis'
 
-  spec.required_ruby_version = '>= 1.8.4'
+  spec.required_ruby_version = '>= 1.8.6'
   spec.requirements = [ 'GNU binutils library and headers' ]
 
   spec.files = Dir['module/*.c', 'module/*.h', 'examples/*.rb']
