@@ -546,8 +546,10 @@ static void disasm_init( struct disassemble_info * info,
 	/* libopcodes disassembler options */
 	var = rb_iv_get(class, IVAR(DIS_ATTR_OPTIONS));
 	if ( var != Qnil ) {
+#ifndef RUBY_18
 		// TODO: why does this crash 1.8 ?
-		//info->disassembler_options = StringValueCStr( var );
+		info->disassembler_options = StringValueCStr( var );
+#endif
 	}
 }
 
