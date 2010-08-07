@@ -9,6 +9,7 @@
 #ifndef RUBY_COMPAT_H
 #define RUBY_COMPAT_H
 
+#include <ruby.h>
 
 #ifdef RUBY_18
 #include <stdarg.h>
@@ -17,6 +18,7 @@
 #define rb_hash_lookup2( a1, a2, a3 ) Opdis_rb_hash_lookup2(a1, a2, a3)
 #endif
 
+VALUE Opdis_path2class(const char * path);
 #define path2class(path) Opdis_path2class(path)
 
 #endif

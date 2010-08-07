@@ -14,7 +14,7 @@ spec = Gem::Specification.new do |spec|
   spec.homepage = 'http://rubyforge.org/projects/opdis/'
   spec.rubyforge_project = 'opdis'
 
-  spec.required_ruby_version = '>= 1.8.6'
+  spec.required_ruby_version = '>= 1.9.1'
   spec.requirements = [ 'GNU binutils library and headers' ]
 
   spec.files = Dir['module/*.c', 'module/*.h', 'examples/*.rb']

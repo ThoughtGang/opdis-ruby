@@ -629,7 +629,7 @@ static VALUE cls_disasm_new(VALUE class, VALUE hash) {
 
 
 	/* libopcodes disassembler options string */
-	var = rb_hash_lookup2(hash, str_to_sym(DIS_ARG_OPTS), Qnil);
+	var = rb_hash_lookup2(hash, str_to_sym(DIS_ARG_OPTS), rb_str_new2(""));
 	rb_iv_set(instance, IVAR(DIS_ATTR_OPTIONS), var );
 
 	/* -- Get Disassembler Function (print-insn-*) */
