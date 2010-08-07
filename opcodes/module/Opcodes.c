@@ -12,7 +12,11 @@
 
 #include "Opcodes.h"
 
+#ifdef RUBY_18
+#define IVAR(attr) attr
+#else
 #define IVAR(attr) "@" attr
+#endif
 
 static VALUE modOpcodes;
 static VALUE clsDisasm;
