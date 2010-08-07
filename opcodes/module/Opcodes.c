@@ -42,59 +42,62 @@ struct disasm_def {
 
 static struct disasm_def disasm_definitions[] = {
 // TODO: fix conditional compilation, set arch and mach for all entries
-#if 0
 // Goddamn GNU. They make it impossible to get a list of supported
 // architectures at build OR run time.
-	#ifdef ARCH_alpha
-		{"alpha", print_insn_alpha},
+	#ifdef ARCH_ALPHA
+		{"alpha", bfd_arch_alpha, bfd_mach_alpha_ev4, print_insn_alpha},
 	#endif
-	#ifdef ARCH_avr
-		{"avr", print_insn_avr},
+	#ifdef ARCH_ARM
+		{"big_arm", bfd_arch_arm, bfd_mach_arm_umknown, 
+			print_insn_big_arm},
+		{"little_arm", bfd_arch_arm, bfd_mach_arm_unknown,
+			print_insn_little_arm},
 	#endif
-	#ifdef ARCH_bfin
-		{"bfin", print_insn_bfin},
+	#ifdef ARCH_AVR
+		{"avr", bfd_arch_avr, bfd_mach_avr1, print_insn_avr},
 	#endif
-	#ifdef ARCH_arm
-		{"big_arm", print_insn_big_arm},
-		{"little_arm", print_insn_little_arm},
+	#ifdef ARCH_BFIN
+		{"bfin", bfd_arch_bfin, bfd_mach_bfin, print_insn_bfin},
 	#endif
-	#ifdef ARCH_cr16
+#if 0
+	#ifdef ARCH_CR16
 		{"cr16", print_insn_cr16},
 	#endif
-	#ifdef ARCH_crx
+	#ifdef ARCH_CRx
 		{"crx", print_insn_crx},
 	#endif
-	#ifdef ARCH_d10v
+	#ifdef ARCH_D10V
 		{"d10v", print_insn_d10v},
 	#endif
-	#ifdef ARCH_d30v
+	#ifdef ARCH_D30V
 		{"d30v", print_insn_d30v},
 	#endif
-	#ifdef ARCH_dlx
+	#ifdef ARCH_DLX
 		{"dlx", print_insn_dlx},
 	#endif
-	#ifdef ARCH_fr30
+	#ifdef ARCH_FR30
 		{"fr30", print_insn_fr30},
 	#endif
-	#ifdef ARCH_frv
+	#ifdef ARCH_FRV
 		{"frv", print_insn_frv},
 	#endif
-	#ifdef ARCH_h8300
+	#ifdef ARCH_H8300
 		{"h8300", print_insn_h8300},
 		{"h8300h", print_insn_h8300h},
 		{"h8300s", print_insn_h8300s},
 	#endif
-	#ifdef ARCH_h8500
+	#ifdef ARCH_H8500
 		{"h8500", print_insn_h8500},
 	#endif
-	#ifdef ARCH_hppa
+	#ifdef ARCH_HPPA
 		{"hppa", print_insn_hppa},
 	#endif
-	#ifdef ARCH_i370
+	#ifdef ARCH_I370
 		{"i370", print_insn_i370},
 	#endif
 #endif
 
+	//#ifdef ARCH_I386
 		{"8086", bfd_arch_i386, bfd_mach_i386_i8086, print_insn_i386},
 		{"x86", bfd_arch_i386, bfd_mach_i386_i386, print_insn_i386},
 		{"x86_att", bfd_arch_i386, bfd_mach_i386_i386, 
@@ -105,159 +108,158 @@ static struct disasm_def disasm_definitions[] = {
 		{"x86_64_att", bfd_arch_i386, bfd_mach_x86_64, print_insn_i386},
 		{"x86_64_intel", bfd_arch_i386, bfd_mach_x86_64_intel_syntax, 
 			         print_insn_i386}
-#if 0
-// Ditto.
-	#ifdef ARCH_i386
-		{"i386", print_insn_i386},
-		{"i386_att", print_insn_i386_att},
-		{"i386_intel", print_insn_i386_intel},
-	#endif
+	//#endif
+
 	#ifdef ARCH_i860
-		{"i860", print_insn_i860},
+		{"i860", bfd_arch_i860, 0, print_insn_i860},
 	#endif
 	#ifdef ARCH_i960
-		{"i960", print_insn_i960},
+		{"i960", bfd_arch_i960, bfd_mach_i960_core, print_insn_i960},
+		{"i960_hx", bfd_arch_i960, bfd_mach_i960_hx, print_insn_i960},
 	#endif
 	#ifdef ARCH_ia64
-		{"ia64", print_insn_ia64},
+		{"ia64", bfd_arch_ia64, bfd_mach_ia64_elf64, print_insn_ia64},
+		{"ia64_32", bfd_arch_ia64, bfd_mach_ia64_elf32, 
+			print_insn_ia64},
 	#endif
-	#ifdef ARCH_ip2k
+#if 0
+	#ifdef ARCH_IP2K
 		{"ip2k", print_insn_ip2k},
 	#endif
-	#ifdef ARCH_iq2000
+	#ifdef ARCH_IQ2000
 		{"iq2000", print_insn_iq2000},
 	#endif
-	#ifdef ARCH_lm32
+	#ifdef ARCH_LM32
 		{"lm32", print_insn_lm32},
 	#endif
-	#ifdef ARCH_m32c
+	#ifdef ARCH_M32C
 		{"m32c", print_insn_m32c},
 	#endif
-	#ifdef ARCH_m32r
+	#ifdef ARCH_M32R
 		{"m32r", print_insn_m32r},
 	#endif
-	#ifdef ARCH_m68hc11
+	#ifdef ARCH_M68HC11
 		{"m68hc11", print_insn_m68hc11},
 	#endif
-	#ifdef ARCH_m68hc12
+	#ifdef ARCH_M68HC12
 		{"m68hc12", print_insn_m68hc12},
 	#endif
-	#ifdef ARCH_m68k
+	#ifdef ARCH_M68K
 		{"m68k", print_insn_m68k},
 	#endif
-	#ifdef ARCH_m88k
+	#ifdef ARCH_M88K
 		{"m88k", print_insn_m88k},
 	#endif
-	#ifdef ARCH_maxq
+	#ifdef ARCH_MAXQ
 		{"maxq_big", print_insn_maxq_big},
 		{"maxq_little", print_insn_maxq_little},
 	#endif
-	#ifdef ARCH_mcore
+	#ifdef ARCH_MCORE
 		{"mcore", print_insn_mcore},
 	#endif
-	#ifdef ARCH_mep
+	#ifdef ARCH_MEP
 		{"mep", print_insn_mep},
 	#endif
-	#ifdef ARCH_microblaze
+	#ifdef ARCH_MICROBLAZE
 		{"microblaze", print_insn_microblaze},
 	#endif
-	#ifdef ARCH_mips
+	#ifdef ARCH_MIPS
 		{"big_mips", print_insn_big_mips},
 		{"little_mips", print_insn_little_mips},
 	#endif
-	#ifdef ARCH_mmix
+	#ifdef ARCH_MMIX
 		{"mmix", print_insn_mmix},
 	#endif
-	#ifdef ARCH_mn10200
+	#ifdef ARCH_MN10200
 		{"mn10200", print_insn_mn10200},
 	#endif
-	#ifdef ARCH_mn10300
+	#ifdef ARCH_MN10300
 		{"mn10300", print_insn_mn10300},
 	#endif
-	#ifdef ARCH_moxie
+	#ifdef ARCH_MOXIE
 		{"moxie", print_insn_moxie},
 	#endif
-	#ifdef ARCH_msp430
+	#ifdef ARCH_MSP430
 		{"msp430", print_insn_msp430},
 	#endif
-	#ifdef ARCH_mt
+	#ifdef ARCH_MT
 		{"mt", print_insn_mt},
 	#endif
-	#ifdef ARCH_ns32k
+	#ifdef ARCH_NS32K
 		{"ns32k", print_insn_ns32k},
 	#endif
-	#ifdef ARCH_openrisc
+	#ifdef ARCH_OPENRISC
 		{"openrisc", print_insn_openrisc},
 	#endif
-	#ifdef ARCH_or32
+	#ifdef ARCH_OR32
 		{"big_or32", print_insn_big_or32},
 		{"little_or32", print_insn_little_or32},
 	#endif
-	#ifdef ARCH_pdp11
+	#ifdef ARCH_PDP11
 		{"pdp11", print_insn_pdp11},
 	#endif
-	#ifdef ARCH_pj
+	#ifdef ARCH_PJ
 		{"pj", print_insn_pj},
 	#endif
-	#ifdef ARCH_powerpc
+	#ifdef ARCH_POWERPC
 		{"big_powerpc", print_insn_big_powerpc},
 		{"little_powerpc", print_insn_little_powerpc},
 	#endif
-	#ifdef ARCH_rs6000
+	#ifdef ARCH_RS6000
 		{"rs6000", print_insn_rs6000},
 	#endif
-	#ifdef ARCH_s390
+	#ifdef ARCH_S390
 		{"s390", print_insn_s390},
 	#endif
-	#ifdef ARCH_score
+	#ifdef ARCH_SCORE
 		{"big_score", print_insn_big_score},
 		{"little_score", print_insn_little_score},
 	#endif
-	#ifdef ARCH_sh
+	#ifdef ARCH_SH
 		{"sh", print_insn_sh},
 		{"sh64", print_insn_sh64},
 		{"sh64x_media", print_insn_sh64x_media},
 	#endif
-	#ifdef ARCH_sparc
+	#ifdef ARCH_SPARC
 		{"sparc", print_insn_sparc},
 	#endif
-	#ifdef ARCH_spu
+	#ifdef ARCH_SPU
 		{"spu", print_insn_spu},
 	#endif
-	#ifdef ARCH_tic30
+	#ifdef ARCH_TIC30
 		{"tic30", print_insn_tic30},
 	#endif
-	#ifdef ARCH_tic4x
+	#ifdef ARCH_TIC4X
 		{"tic4x", print_insn_tic4x},
 	#endif
-	#ifdef ARCH_tic54x
+	#ifdef ARCH_TIC54X
 		{"tic54x", print_insn_tic54x},
 	#endif
-	#ifdef ARCH_tic80
+	#ifdef ARCH_TIC80
 		{"tic80", print_insn_tic80},
 	#endif
-	#ifdef ARCH_v850
+	#ifdef ARCH_V850
 		{"v850", print_insn_v850},
 	#endif
-	#ifdef ARCH_vax
+	#ifdef ARCH_VAX
 		{"vax", print_insn_vax},
 	#endif
-	#ifdef ARCH_w65
+	#ifdef ARCH_W65
 		{"w65", print_insn_w65},
 	#endif
-	#ifdef ARCH_xc16x
+	#ifdef ARCH_XC16X
 		{"xc16x", print_insn_xc16x},
 	#endif
-	#ifdef ARCH_xstormy16
+	#ifdef ARCH_XSTORMY16
 		{"xstormy16", print_insn_xstormy16},
 	#endif
-	#ifdef ARCH_xtensa
+	#ifdef ARCH_XTENSA
 		{"xtensa", print_insn_xtensa},
 	#endif
-	#ifdef ARCH_z80
+	#ifdef ARCH_Z80
 		{"z80", print_insn_z80},
 	#endif
-	#ifdef ARCH_z8k
+	#ifdef ARCH_Z8K
 		{"z8001", print_insn_z8001},
 		{"z8002", print_insn_z8002}
 	#endif
