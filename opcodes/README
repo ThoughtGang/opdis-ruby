@@ -1,6 +1,36 @@
-Gem for the GNU Binutils libopcodes library.
+				Opcodes
 
-iBINUTILS AND SUPPORTED ARCHITECTURES
+A Ruby C extension (and gem) for the GNU Binutils libopcodes library.
+
+BUILD
+-----
+
+The standard C extension build process is used:
+
+	bash# ruby1.8 extconf.rb
+	bash# make
+
+Note that the Ruby headers must be installed. On Ubuntu, these are in the
+ruby-dev or ruby1.9-dev package.
+
+
+The gem is built using the standard gem build command:
+
+	bash# gem build Opcodes.gemspec
+
+
+The top-level Makefile supports each of these builds with the commands
+'make' and 'make gem'.
+
+	bash# make
+	# builds C extension
+	bash# make gem
+	# builds the gem
+
+
+BINUTILS AND SUPPORTED ARCHITECTURES
+------------------------------------
+
 The implementation of binutils (and libopcodes) does not provide a way to 
 determine the supported platforms at compile time, unless the config.h file 
 used to build the binutils package is present.
@@ -37,5 +67,31 @@ architectures when there is no working objdump present. Note that libopcodes
 must have been compiled with support for the architectures, or you will get
 runtime errors.
 
+
+RUBY 1.8 SUPPORT
+
+...is not available. Attempts to backport the 1.9 extension to 1.8 resulted
+in the 1.8 interpreter aborting whenever an instance variable was accessed.
+
+Any user of 1.8 is welcome to submit a patch which provides 1.8 support
+without breaking 1.9 support.
+
+
+EXAMPLES
+
+Extended examples are provided in the 'examples' directory. The following
+code snippets give a brief overview of using the BFD and Opcodes extensions
+together.
+
+require 'BFD'
+t = Bfd::Target.new('/tmp/a.out')
+
+require 'Opcodes'
+o = Opcodes::Disassembler.new( :bfd => t, :arch => 'x86' )
+o.disasm_insn( t.sections['.text'].contents, :vma => 0 )
+
+
+o = Opcodes::Disassembler.new( :bfd => t )                                      
+o.disasm_insn( t.sections['.text'].contents, :vma => 0 )
 
 
