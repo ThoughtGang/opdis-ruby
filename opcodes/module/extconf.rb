@@ -30,16 +30,20 @@ SEEN_ARCH = []
 def handle_bfd_arch( line )
   arch = line.strip
   if ARCH.include?(arch) and not SEEN_ARCH.include?(arch)
+    puts "Adding architecture '#{arch}'"
     SEEN_ARCH << arch
     $CPPFLAGS += " -DARCH_#{arch.upcase}"
   end
 end
 
-# use objdump -i to get supported architectures
-`objdump -i`.split("\n").each { |line| handle_bfd_arch(line) }
-# default to i386 if objdump failed to run
-$CPPFLAGS += " -DARCH_I386" if SEEN_ARCH.length == 0
+# allow user to override the objump binary using --with-objdump=path
+objdump_bin = with_config('objdump', 'objdump')
 
+# use objdump -i to get supported architectures
+`#{objdump_bin} -i`.split("\n").each { |line| handle_bfd_arch(line) }
+
+# default to i386 if objdump failed to run or no architectures were found
+$CPPFLAGS += " -DARCH_I386" if SEEN_ARCH.length == 0
 
 # ----------------------------------------------------------------------
 # Makefile

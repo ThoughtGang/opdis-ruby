@@ -1,5 +1,41 @@
 Gem for the GNU Binutils libopcodes library.
 
-NOTE: the libopcodes implementation does not allow one to determine the
-supported platforms at compile time (unless building from within the
-binutils source tree). For now, the x86 and x86-64 targets are hard-coded.
+iBINUTILS AND SUPPORTED ARCHITECTURES
+The implementation of binutils (and libopcodes) does not provide a way to 
+determine the supported platforms at compile time, unless the config.h file 
+used to build the binutils package is present.
+
+The extconf.rb file has been modified in order to detect the architectures
+supported by the local copy of binutils, and to allow the user to specify
+which architectures they want supported.
+
+It does this using the following steps:
+
+	1. run objdump -i to get the supported architectures
+	2. each line that matches one of binutils' known architectures is
+           added as a #define to CPPFLAGS
+	3. if no architectures have been found, or if objdump failed to run,
+	   default to the i386 architecture.
+
+The binary used in step 1 can be specified by the user via the --with-objdump
+flag. For example:
+
+	bash# cat /tmp/objdump.sh
+	#/bin/sh
+	echo 'arm'
+	echo 'sparc'
+	echo 'm68k'
+	bash# ruby1.9 extconf.rb --with-objdump=/tmp/objdump.sh
+        checking for init_disassemble_info() in -lopcodes... yes
+        Adding architecture 'arm'
+        Adding architecture 'sparc'
+        Adding architecture 'm68k'
+        creating Makefile
+
+This makes it possible to force compilation of support for specific 
+architectures when there is no working objdump present. Note that libopcodes
+must have been compiled with support for the architectures, or you will get
+runtime errors.
+
+
+
