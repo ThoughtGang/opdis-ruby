@@ -10,6 +10,7 @@ dir_config('opcodes')
 # These have to be specified on the command line, as binutils does not
 # provide any clue as to which architectures it has been compiled for
 # on the local machine.
+# NOTE: These were compiled from the list of architectures in bfd.h .
 	
   ARCH= %w[ m32c alpha arc arm avr bfin cr16 cris crx d10v d30v
 	          dlx h8300 h8500 hppa i370 i386 i860 i960 ia64 ip2k fr30
@@ -36,6 +37,9 @@ end
 
 # use objdump -i to get supported architectures
 `objdump -i`.split("\n").each { |line| handle_bfd_arch(line) }
+# default to i386 if objdump failed to run
+$CPPFLAGS += " -DARCH_I386" if SEEN_ARCH.length == 0
+
 
 # ----------------------------------------------------------------------
 # Makefile
