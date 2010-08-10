@@ -3,7 +3,7 @@
 require 'rubygems'
 spec = Gem::Specification.new do |spec|
   spec.name = 'Opcodes'
-  spec.version = '1.1.0'
+  spec.version = '1.2.0'
   spec.summary = 'Ruby extension library providing an API to GNU libopcodes'
   spec.description = %{Libopcodes is the disassembler library used by
   GNU binutils. This extension provides access to libopcodes for Ruby
