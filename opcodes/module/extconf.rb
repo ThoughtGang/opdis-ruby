@@ -1,4 +1,12 @@
 #!/usrbin/ruby1.9
+# Opcodes Ruby extension config file
+# Copyright 2010 Thoughtgang <http://www.thoughtgang.org>
+# Options:
+#   --with-opcodes-dir=path
+#   --with-opcodes-include=path
+#   --with-opcodes-lib=path
+#   --with-objdump=path
+# see README for more info.
 
 require 'mkmf'
 

@@ -7,7 +7,7 @@ BUILD
 
 The standard C extension build process is used:
 
-	bash# ruby1.8 extconf.rb
+	bash# ruby1.9 extconf.rb
 	bash# make
 
 Note that the Ruby headers must be installed. On Ubuntu, these are in the

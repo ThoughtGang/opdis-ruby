@@ -1,0 +1,9 @@
+The Opcodes module is used as a lightweight version of opdis to test 
+interaction with binutils in general and libopcodes in particular.
+
+Code which is developed for the Opcodes extension will be copied into
+the Opdis extension, where it will be maintained separately.
+
+When the extensions are stable, this redundancy needs to be removed. A top-level
+shared dir will contain the redundant code, which will be referenced in the
+gemspecs. NOTE: this may break the gem builds.
