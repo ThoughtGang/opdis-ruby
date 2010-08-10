@@ -1,0 +1,110 @@
+				Opdis
+
+A Ruby C extension (and gem) for the opdis library, available from
+	http://freshmeat.net/projects/opdis .
+
+BUILD
+-----
+
+The standard C extension build process is used:
+
+	bash# ruby1.9 extconf.rb
+	bash# make
+
+Note that the Ruby headers must be installed. On Ubuntu, these are in the
+ruby-dev or ruby1.9-dev package.
+
+
+The gem is built using the standard gem build command:
+
+	bash# gem build Opdis.gemspec
+
+
+The top-level Makefile supports each of these builds with the commands
+'make' and 'make gem'.
+
+	bash# make
+	# builds C extension
+	bash# make gem
+	# builds the gem
+
+
+BINUTILS AND SUPPORTED ARCHITECTURES
+------------------------------------
+
+The implementation of binutils (and libopcodes) does not provide a way to 
+determine the supported platforms at compile time, unless the config.h file 
+used to build the binutils package is present.
+
+The extconf.rb file has been modified in order to detect the architectures
+supported by the local copy of binutils, and to allow the user to specify
+which architectures they want supported.
+
+It does this using the following steps:
+
+	1. run objdump -i to get the supported architectures
+	2. each line that matches one of binutils' known architectures is
+           added as a #define to CPPFLAGS
+	3. if no architectures have been found, or if objdump failed to run,
+	   default to the i386 architecture.
+
+The binary used in step 1 can be specified by the user via the --with-objdump
+flag. For example:
+
+	bash# cat /tmp/objdump.sh
+	#/bin/sh
+	echo 'arm'
+	echo 'sparc'
+	echo 'm68k'
+	bash# ruby1.9 extconf.rb --with-objdump=/tmp/objdump.sh
+        checking for init_disassemble_info() in -lopcodes... yes
+        Adding architecture 'arm'
+        Adding architecture 'sparc'
+        Adding architecture 'm68k'
+        creating Makefile
+
+This makes it possible to force compilation of support for specific 
+architectures when there is no working objdump present. Note that libopcodes
+must have been compiled with support for the architectures, or you will get
+runtime errors.
+
+
+RUBY 1.8 SUPPORT
+
+...is not available. Attempts to backport the 1.9 extension to 1.8 resulted
+in the 1.8 interpreter aborting whenever an instance variable was accessed.
+
+Any user of 1.8 is welcome to submit a patch which provides 1.8 support
+without breaking 1.9 support.
+
+
+EXAMPLES
+
+Extended examples are provided in the 'examples' directory. The following
+code snippets give a brief overview of using the BFD and Opdis extensions
+together.
+
+require 'BFD'
+require 'Opdis'
+
+Bfd::Target.new('/tmp/a.out') do |tgt|
+	Opdis::Disassembler.new do |dis|
+		dis.disasm_entry( tgt ) { |insn| puts insn }
+	end
+end
+
+tgt = Bfd::Target.new('/tmp/a.out')
+tgt.sections.values.each { |s| puts s.name } }
+Opdis::Disassembler.new do |dis|
+	dis.disasm_section( tgt.sections['.text.] ) { |i| puts i }
+end
+
+Opdis::Disassembler.architectures.each { |arch| puts arch }
+
+Opdis::Disassembler.new( arch: 'x86_64_intel' ) do |dis|
+	dis.disassemble( [0x90, 0xCC, 0x90] ) { |insn| puts insn }
+end
+
+Opdis::Disassembler.new( arch: 'x86_intel' ) do |dis|
+	dis.disassemble( "\x90\xCC\x90" ) { |insn| puts insn }
+end
