@@ -14,6 +14,7 @@
 #include <opdis/opdis.h>
 
 #include "Opdis.h"
+#include "Arch.h"
 #include "Callbacks.h"
 #include "Model.h"
 
@@ -104,33 +105,6 @@ static void init_output_class( VALUE modOpdis ) {
 
 
 /* ---------------------------------------------------------------------- */
-/* Disassembler Architectures (internal) */
-struct arch_def { 
-	const char * name; 
-	enum bfd_architecture arch;	/* BFD CPU architecture */
-	unsigned long mach;		/* (default) BFD machine type */
-	disassembler_ftype fn;		/* libopcodes print_insn callback */
-};
-
-/* ---------------------------------------------------------------------- */
-/* Supported architectures */
-
-static struct arch_def arch_definitions[] = {
-	// TODO: arm, ia64, ppc, sparc, etc
-
-	{"8086", bfd_arch_i386, bfd_mach_i386_i8086, print_insn_i386},
-	{"x86", bfd_arch_i386, bfd_mach_i386_i386, print_insn_i386},
-	{"x86_att", bfd_arch_i386, bfd_mach_i386_i386, print_insn_i386_att},
-	{"x86_intel", bfd_arch_i386, bfd_mach_i386_i386_intel_syntax, 
-		      print_insn_i386_intel},
-	{"x86_64", bfd_arch_i386, bfd_mach_x86_64, print_insn_i386},
-	{"x86_64_att", bfd_arch_i386, bfd_mach_x86_64, print_insn_i386},
-	{"x86_64_intel", bfd_arch_i386, bfd_mach_x86_64_intel_syntax, 
-			         print_insn_i386}
-};
-
-
-/* ---------------------------------------------------------------------- */
 /* Disassembler Class */
 
 /* list all recognized syntaxes */
@@ -141,16 +115,23 @@ static VALUE cls_disasm_syntaxes( VALUE class ) {
 	return ary;
 }
 
+static int fill_disasm_def_array( const Opdis_disasm_def * def, void * arg ) {
+	VALUE * ary = (VALUE *) arg;
+	const Opdis_disasm_def * invalid = Opdis_disasm_invalid();
+
+	/* do not report the INVALID disasm def */
+	if ( def != invalid ) {
+		rb_ary_push( * ary, rb_str_new_cstr(def->name) );
+	}
+
+	return 1;
+}
+
 /* list all recognized architectures */
 static VALUE cls_disasm_architectures( VALUE class ) {
 	VALUE ary = rb_ary_new();
-	int i;
-	int num_defs = sizeof(arch_definitions) / sizeof(struct arch_def);
 
-	for ( i = 0; i < num_defs; i++ ) {
-		struct arch_def *def = &arch_definitions[i];
-		rb_ary_push( ary, rb_str_new_cstr(def->name) );
-	}
+	Opdis_disasm_iter( fill_disasm_def_array, &ary );
 
 	return ary;
 }
@@ -341,53 +322,56 @@ static VALUE cls_disasm_set_syntax(VALUE instance, VALUE syntax) {
 	return Qtrue;
 }
 
+struct get_arch_name_arg {
+	opdis_t opdis;
+	const char * name;
+};
+
+static int get_name_for_arch( const Opdis_disasm_def * def, void * arg ) {
+	struct get_arch_name_arg * out = (struct get_arch_name_arg *) arg;
+	if ( def->arch == out->opdis->config.arch &&
+	     def->mach == out->opdis->config.mach ) {
+		out->name = def->name;
+		return 0;
+	}
+
+	return 1;
+}
+
+
 static VALUE cls_disasm_get_arch(VALUE instance) {
 	opdis_t  opdis;
-	int i;
-	int num_defs = sizeof(arch_definitions) / sizeof(struct arch_def);
+	struct get_arch_name_arg arg = { NULL, "unknown" };
 
 	Data_Get_Struct(instance, opdis_info_t, opdis);
 	if (! opdis ) {
 		rb_raise( rb_eRuntimeError, "Invalid opdis_t" );
 	}
 
-	for ( i = 0; i < num_defs; i++ ) {
-		struct arch_def *def = &arch_definitions[i];
-		if ( def->arch == opdis->config.arch &&
-		     def->mach == opdis->config.mach ) {
-			return rb_str_new_cstr(def->name);
-		}
-	}
+	Opdis_disasm_iter( get_name_for_arch, &arg );
 
-	return rb_str_new_cstr("unknown");
+	return rb_str_new_cstr(arg.name);
 }
 
 static VALUE cls_disasm_set_arch(VALUE instance, VALUE arch) {
 	opdis_t  opdis;
-	struct disassemble_info * info;
-	int i;
-	int num_defs = sizeof(arch_definitions) / sizeof(struct arch_def);
+	const Opdis_disasm_def * def;
 	const char * name = rb_string_value_cstr(&arch);
 
 	Data_Get_Struct(instance, opdis_info_t, opdis);
 	if (! opdis ) {
 		rb_raise( rb_eRuntimeError, "Invalid opdis_t" );
 	}
-	info = &opdis->config;
 
-	info->application_data = arch_definitions[0].fn;
-	info->arch = bfd_arch_unknown;
-	info->mach = 0;
+	def = Opdis_disasm_for_name( name );
 
-	for ( i = 0; i < num_defs; i++ ) {
-		struct arch_def *def = &arch_definitions[i];
-		if (! strcmp(name, def->name) ) {
-			info->application_data = def->fn;
-			info->arch = def->arch;
-			info->mach = def->mach;
-			rb_iv_set(instance, IVAR(DIS_ATTR_ARCH), arch);
-			return Qtrue;
-		}
+	if ( def != Opdis_disasm_invalid() ) {
+		struct disassemble_info * info = &opdis->config;
+		info->application_data = def->fn;
+		info->arch = def->arch;
+		info->mach = def->mach;
+
+		rb_iv_set(instance, IVAR(DIS_ATTR_ARCH), arch);
 	}
 
 	return Qfalse;
