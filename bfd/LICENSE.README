@@ -1,8 +1,8 @@
 The BFD Ruby extension is released under the GNU Public License version 3.0,
 distributed in this package as LICENSE.
 
-The intent of this license choice is not to restrict distribution, but to
-match the distribution terms of opdis and GNU binutils.
+The intent of this license choice is not to restrict distribution, but for
+compatibility with the distribution terms of opdis and GNU binutils.
 
 Contact community@thoughtgang.org for alternative licensing arrangements if
 the GPLv3 is too restrictive.

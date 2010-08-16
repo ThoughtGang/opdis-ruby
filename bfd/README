@@ -1,12 +1,56 @@
-			BFD Ruby Extension
 
-Ruby extension providing limited access to the GNU BFD library, part of
-GNU binutils.
+			  BFD (Binary File Descriptor)
+
+A Ruby C extension (and gem) for the GNU Binutils libbfd library.
 
 Note: this is not a complete implementation of the BFD API; it is only
 intended for use with the Opcodes or Opdis Ruby extensions.
 
-Manual Build
-------------
+BUILD
+-----
 
-cd module && ruby1.9 extconf.rb && make
+The standard C extension build process is used:
+
+	bash# ruby1.9 extconf.rb
+	bash# make
+
+Note that the Ruby headers must be installed. On Ubuntu, these are in the
+ruby-dev or ruby1.9-dev package.
+
+
+The gem is built using the standard gem build command:
+
+	bash# gem build Opcodes.gemspec
+
+
+The top-level Makefile supports each of these builds with the commands
+'make' and 'make gem'.
+
+	bash# make
+	# builds C extension
+	bash# make gem
+	# builds the gem
+
+
+RUBY 1.8 SUPPORT
+
+...is not available. Attempts to backport the 1.9 extension to 1.8 resulted
+in the 1.8 interpreter aborting whenever an instance variable was accessed.
+
+Any user of 1.8 is welcome to submit a patch which provides 1.8 support
+without breaking 1.9 support.
+
+
+EXAMPLES
+
+Extended examples are provided in the 'examples' directory. The following
+code snippets give a brief overview of using the BFD extension.
+
+require 'BFD'
+
+t = Bfd::Target.new('/tmp/a.out')
+t.symbols.values.each { |sym| puts sym }
+
+Bfd::Target.new('/tmp/a.out') do |tgt|
+	tgt.sections.each { |name, sec| puts sec }
+end
