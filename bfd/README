@@ -1,4 +1,12 @@
-Gem for GNU Binutils BFD library.
+			BFD Ruby Extension
+
+Ruby extension providing limited access to the GNU BFD library, part of
+GNU binutils.
 
 Note: this is not a complete implementation of the BFD API; it is only
-intended for use with the Opcodes or Opdis gems.
+intended for use with the Opcodes or Opdis Ruby extensions.
+
+Manual Build
+------------
+
+cd module && ruby1.9 extconf.rb && make
