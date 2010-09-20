@@ -1,0 +1,54 @@
+				 Magic
+
+A Ruby C extension (and gem) for the libmagic library and database used by
+the file(1) command.
+
+BUILD
+-----
+
+The standard C extension build process is used:
+
+	bash# ruby1.9 extconf.rb
+	bash# make
+
+Note that the Ruby headers must be installed. On Ubuntu, these are in the
+ruby-dev or ruby1.9-dev package.
+
+
+The gem is built using the standard gem build command:
+
+	bash# gem build Magic.gemspec
+
+
+The top-level Makefile supports each of these builds with the commands
+'make' and 'make gem'.
+
+	bash# make
+	# builds C extension
+	bash# make gem
+	# builds the gem
+
+
+RUBY 1.8 SUPPORT
+
+...is not available. Attempts to backport the 1.9 extension to 1.8 resulted
+in the 1.8 interpreter aborting whenever an instance variable was accessed.
+
+Any user of 1.8 is welcome to submit a patch which provides 1.8 support
+without breaking 1.9 support.
+
+
+EXAMPLES
+
+Extended examples are provided in the 'examples' directory. The following
+code snippets give a brief overview of using the BFD and Opcodes extensions
+together.
+
+require 'Magic'
+File.open( '/tmp/a.out' ) { |f| puts Magic::identify(f) }
+
+File.open( '/tmp/a.out' ) { |f| puts Magic::identify(f, {:mime => true}) }
+
+Magic.identify( '<html></html>' )
+
+Magic.identify( [0x7f, 0x45, 0x4c, 0x00] )
