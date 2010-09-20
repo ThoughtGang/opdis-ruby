@@ -1,6 +1,6 @@
-# Makefile for BFD gem build
+# Makefile for Magic gem build
 
-NAME		= 	BFD
+NAME		= 	Magic
 GEMSPEC		=	$(NAME).gemspec
 
 RUBY_VERSION	=	1.9
