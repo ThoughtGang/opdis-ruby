@@ -1,0 +1,5 @@
+MagicExt.so
+Makefile
+Magic.o
+ruby_compat.o
+
