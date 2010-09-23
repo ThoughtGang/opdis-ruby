@@ -3,7 +3,7 @@
 require 'rubygems'
 spec = Gem::Specification.new do |spec|
   spec.name = 'BFD'
-  spec.version = '1.2.1'
+  spec.version = '1.2.2'
   spec.summary = 'Ruby extension library providing an API to GNU BFD'
   spec.description = %{BFD is the Binary File Descriptor object used by
   GNU binutils. This extension provides a barebones BFD wrapper which 
@@ -18,7 +18,7 @@ spec = Gem::Specification.new do |spec|
   spec.required_ruby_version = '>= 1.9.1'
   spec.requirements = [ 'GNU binutils library and headers' ]
 
-  spec.files = Dir['module/*.c', 'module/*.h', 'module/Bfd.rb', 
+  spec.files = Dir['module/*.c', 'module/*.h', 'lib/Bfd.rb', 
                    'examples/*.rb', 'README', 'ChangeLog', 'LICENSE',
                    'LICENSE.README']
   spec.extra_rdoc_files = Dir['module/rdoc_input/*.rb']

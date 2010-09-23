@@ -3,7 +3,7 @@
 require 'rubygems'
 spec = Gem::Specification.new do |spec|
   spec.name = 'Magic'
-  spec.version = '1.0.1'
+  spec.version = '1.0.2'
   spec.summary = 'Ruby extension library providing an API to libmagic'
   spec.description = %{This extension provides access to the libmagic
   library, which is used (e.g. by the file(1) command) to identify the
@@ -20,7 +20,7 @@ spec = Gem::Specification.new do |spec|
   spec.required_ruby_version = '>= 1.9.1'
   spec.requirements = [ 'libmagic dev file (library and header)' ]
 
-  spec.files = Dir['module/*.c', 'module/*.h', 'module/Magic.rb', 
+  spec.files = Dir['module/*.c', 'module/*.h', 'lib/Magic.rb', 
                    'examples/*.rb', 'README', 'ChangeLog', 'LICENSE',
                    'LICENSE.README']
   spec.extensions = Dir['module/extconf.rb']
