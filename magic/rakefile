@@ -1,0 +1,63 @@
+# Ruby rakefile for Magic module
+# Copyright 2010 Thoughtgang <http://www.thoughtgang.org>
+
+require 'rake/gempackagetask'
+require 'rake/packagetask'
+require 'rake/rdoctask'
+require 'rake/testtask'
+
+UNIT_TEST_FILES = FileList[
+  'tests/ut_*.rb'
+]
+
+task :default => [:test]
+
+# ----------------------------------------------------------------------
+spec = Gem::Specification.new do |spec|
+  spec.name = 'Magic'
+  spec.version = '1.1.0'
+  spec.summary = 'Ruby extension library providing an API to libmagic'
+  spec.description = %{This extension provides access to the libmagic
+  library, which is used (e.g. by the file(1) command) to identify the
+  type of a binary or text file based on its initial bytes. The module
+  offers a simple interface, with the bulk of the interface with libmagic
+  being performed behind-the-scenes.}
+
+  spec.author = 'TG Community'
+  spec.email = 'community@thoughtgang.org'
+  spec.homepage = 'http://rubyforge.org/projects/opdis/'
+  spec.rubyforge_project = 'opdis'
+  spec.licenses = [ "GPLv3" ]
+
+  spec.required_ruby_version = '>= 1.8.6'
+  spec.requirements = [ 'libmagic dev file (library and header)' ]
+
+  spec.files = Dir['module/*.c', 'module/*.h', 'lib/Magic.rb', 
+                   'examples/*.rb', 'README', 'ChangeLog', 'LICENSE',
+                   'LICENSE.README']
+  spec.extensions = Dir['module/extconf.rb']
+  spec.test_files = UNIT_TEST_FILES
+end
+Rake::GemPackageTask.new(spec) do |pkg|
+  pkg.need_zip = false
+  pkg.need_tar = true
+end
+
+# ----------------------------------------------------------------------
+Rake::RDocTask.new do |rd|
+  rd.main = 'README.rdoc'
+  rd.rdoc_dir = 'doc/html'
+  rd.rdoc_files << 'README.rdoc'
+  rd.rdoc_files += Dir['lib/Magic.rb']
+end
+
+# ----------------------------------------------------------------------
+desc 'Run unit tests'                                                           
+Rake::TestTask.new do |t|
+    t.libs << Dir.pwd + File::SEPARATOR + 'lib'
+    t.libs << Dir.pwd + File::SEPARATOR + 'module'
+    t.test_files = UNIT_TEST_FILES
+    t.verbose = true
+    t.warning = true                    # Run ruby with -w
+end
+

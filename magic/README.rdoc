@@ -1,0 +1,7 @@
+=Magic
+
+==A Ruby C extension (and gem) for the libmagic library and database used by
+the file(1) command.
+
+Copyright 2010 Thoughtgang <http://www.thoughtgang.org>
+

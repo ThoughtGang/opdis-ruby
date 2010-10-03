@@ -1,10 +1,9 @@
 # Makefile for Magic gem build
 
 NAME		= 	Magic
-GEMSPEC		=	$(NAME).gemspec
 
 RUBY_VERSION	=	1.9
-GEM		=	gem$(RUBY_VERSION)
+RAKE		=	rake$(RUBY_VERSION)
 RUBY		=	ruby$(RUBY_VERSION)
 
 # ----------------------------------------------------------------------
@@ -19,7 +18,13 @@ all:
 gem:
 	echo Building $(NAME) gem
 	[ -e module/Makefile ] && (cd module && make clean)
-	$(GEM) build $(GEMSPEC)
+	$(RAKE) gem
+
+test:
+	$(RAKE) test
+
+doc:
+	$(RAKE) rdoc
 
 clean: 
 	echo Cleaning $(NAME) build dir
