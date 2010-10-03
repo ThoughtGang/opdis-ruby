@@ -19,6 +19,12 @@ gems:
 		[ -d $$i ] && (cd $$i && make gem);	\
 	done
 
+test:
+	echo Running tests
+	for i in $(DIRS); do				\
+		[ -d $$i ] && (cd $$i && make test);	\
+	done
+
 clean: 
 	echo Cleaning build dirs
 	for i in $(DIRS); do				\
