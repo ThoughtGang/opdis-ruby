@@ -540,7 +540,8 @@ class TC_MagicIdent < Test::Unit::TestCase
                }.collect{ |i| i.hex }.join('')
 
   def test_buffer
-    tgt = Bfd::Target.new( TARGET_BUF )
+    tgt = Bfd::Target.from_buffer( TARGET_BUF )
+    #tgt = Bfd::Target.new( TARGET_BUF )
     #buf = '<html><head></head><body></body></html>'
     #assert_equal( 'HTML document text', Magic.identify(buf) )
   end

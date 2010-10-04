@@ -1,0 +1,8 @@
+=BFD (Binary File Descriptor)
+==A Ruby C extension (and gem) for the GNU Binutils libbfd library.
+
+Copyright 2010 Thoughtgang <http://www.thoughtgang.org>
+
+
+Note: this is not a complete implementation of the BFD API; it is only
+intended for use with the Opcodes or Opdis Ruby extensions.

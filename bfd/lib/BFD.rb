@@ -2,8 +2,8 @@
 # Copyright 2010 Thoughtgang <http://www.thoughtgang.org>
 # Ruby additions to BFD module
 
-# Load C extension wrapping libbfd.so
-require 'BFDext'
+require 'BFDext'            # Load C extension wrapping libbfd.so
+require 'tempfile'          # For buffer target
 
 module Bfd
 
@@ -43,6 +43,14 @@ Defined in /usr/include/bfd.h : struct bfd
               0x4000 => 'DETERMINISTIC_OUTPUT' }
 
 =begin rdoc
+Temporary file used if Target is instantiated from a buffer. BFD does not
+operate on memory locations and requires a file descriptor; a temporary
+file is therefore created on the filesystem when Target.from_buffer is
+called. The temp file is deleted when Target.close is called.
+=end
+    attr_accessor :temp_file
+
+=begin rdoc
 Create a new Target from a path or IO object. This just wraps for ext_new
 and provides a default value for args.
 =end
@@ -50,6 +58,34 @@ and provides a default value for args.
       bfd = ext_new(target, args)
       yield bfd if (bfd and block_given?)
       return bfd
+    end
+
+=begin rdoc
+Instantiate target from a buffer instead of from a file. Note: this creates
+a temp_file which MUST be freed by calling Target.close, or by passing a 
+block to this method.
+=end
+    def self.from_buffer(buf, args={})
+
+      f = Tempfile.new( 'bfd_target' )
+      f.write(buf)
+
+      bfd = ext_new(f, args)
+      raise "Unable to construct BFD" if not bfd
+
+      if not block_given?
+        @temp_file = f
+        return bfd
+      end
+
+      # yield bfd object, then close temp file
+      yield bfd
+      f.close
+      nil
+    end
+
+    def close
+      @temp_file.close if @temp_file
     end
 
 =begin rdoc
