@@ -3,7 +3,11 @@
 NAME		= 	BFD
 GEMSPEC		=	$(NAME).gemspec
 
+ifeq "$(RUBY_VERSION)" ""
 RUBY_VERSION	=	1.9
+endif
+export RUBY_VERSION
+
 GEM		=	gem$(RUBY_VERSION)
 RUBY		=	ruby$(RUBY_VERSION)
 
@@ -24,4 +28,5 @@ gem:
 clean: 
 	echo Cleaning $(NAME) build dir
 	[ -e module/Makefile ] && (cd module && make clean)
+	[ -e module/Makefile ] && (cd module && make distclean)
 	rm -f *.gem

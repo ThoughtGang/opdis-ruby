@@ -165,7 +165,6 @@ static void init_section_class( VALUE modBfd ) {
 	rb_define_attr(clsSection, SEC_ATTR_SIZE, 1, 0);
 	rb_define_attr(clsSection, SEC_ATTR_ALIGN, 1, 0);
 	rb_define_attr(clsSection, SEC_ATTR_FPOS, 1, 0);
-	rb_define_attr(clsSection, SEC_ATTR_FPOS, 1, 0);
 	rb_define_attr(clsSection, SEC_ATTR_SYM, 1, 0);
 
 	rb_define_method(clsSection, SEC_ATTR_CONTENTS, cls_section_contents, 
