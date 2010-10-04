@@ -60,6 +60,7 @@
 /* module and class names */
 #define BFD_MODULE_NAME "Bfd"
 #define TARGET_CLASS_NAME "Target"
+#define BUFFER_TGT_CLASS_NAME "BufferTarget"
 #define SECTION_CLASS_NAME "Section"
 #define SYMBOL_CLASS_NAME "Symbol"
 

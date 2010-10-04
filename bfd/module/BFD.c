@@ -14,8 +14,12 @@
 
 #define IVAR(attr) "@" attr
 
+static VALUE symFileno;
+static VALUE symPath;
+
 static VALUE modBfd;
 static VALUE clsTarget;
+static VALUE clsBufferTarget;
 static VALUE clsSection;
 static VALUE clsSymbol;
 
@@ -186,25 +190,9 @@ static void fill_arch_info( const struct bfd_arch_info * info, VALUE * hash ) {
 							      info->mach)) );
 }
 
-static VALUE cls_target_new(VALUE class, VALUE tgt, VALUE hash) {
-	bfd * abfd;
+static VALUE new_target_for_bfd(VALUE class, bfd * abfd, VALUE hash) {
 	VALUE instance, var;
 	VALUE argv[1] = { Qnil };
-
-	if ( Qtrue == rb_obj_is_kind_of( tgt, rb_cIO) ) {
-		int fd = NUM2INT(rb_funcall(tgt, rb_intern("fileno"), 0));
-		VALUE rb_path = rb_funcall(tgt, rb_intern("path"), 0);
-		char * path = StringValuePtr(rb_path);
-		abfd = bfd_fdopenr (path, NULL, fd);
-
-	} else if ( Qtrue == rb_obj_is_kind_of( tgt, rb_cString) ) {
-		char * path = StringValuePtr(tgt);
-		abfd = bfd_openr (path, NULL);
-
-	} else {
-		rb_raise(rb_eArgError, "Bfd requires a path or IO object");
-	}
-
 	// TODO: process hash argument supporting flavour, arch, and mach info
 
 	if (! abfd || abfd == (bfd *) bfd_error_invalid_target ) {
@@ -249,6 +237,49 @@ static VALUE cls_target_new(VALUE class, VALUE tgt, VALUE hash) {
 	rb_iv_set(instance, IVAR(TGT_ATTR_ARCH_INFO), var );
 
 	return instance;
+}
+
+static VALUE cls_buf_target_new(VALUE class, VALUE tgt, VALUE path, VALUE hash){
+	FILE * f; 
+	bfd * abfd ;
+
+	if ( Qfalse == rb_obj_is_kind_of( tgt, rb_cString) ) {
+		rb_raise(rb_eArgError, "String object required");
+	}
+
+	f = fmemopen( RSTRING_PTR(tgt), RSTRING_LEN(tgt), "r");
+	if (! f ) {
+		rb_raise(rb_eArgError, "Unable to fmemopen() String");
+	}
+
+	abfd = bfd_fdopenr(StringValuePtr(path), NULL, fileno(f));
+
+	return new_target_for_bfd( class, abfd, hash );
+}
+
+static VALUE cls_target_new(VALUE class, VALUE tgt, VALUE hash) {
+	bfd * abfd = NULL;
+
+	if ( rb_respond_to( tgt, symFileno ) ) {
+		int fd;
+		VALUE fd_val = rb_funcall(tgt, symFileno, 0);
+		VALUE rb_path = rb_funcall(tgt, symPath, 0);
+		char * path = StringValuePtr(rb_path);
+		if ( Qnil == fd_val ) {
+			rb_raise(rb_eArgError, "Invalid fileno() in IO object");
+		}
+		fd = NUM2INT(fd_val);
+		abfd = bfd_fdopenr (path, NULL, fd);
+
+	} else if ( Qtrue == rb_obj_is_kind_of( tgt, rb_cString) ) {
+		char * path = StringValuePtr(tgt);
+		abfd = bfd_openr (path, NULL);
+
+	} else {
+		rb_raise(rb_eArgError, "Bfd requires a path or IO object");
+	}
+
+	return new_target_for_bfd( class, abfd, hash );
 }
 
 static VALUE cls_target_sections(VALUE instance) {
@@ -352,13 +383,25 @@ static void init_target_class( VALUE modBfd ) {
 	bfd_init();
 }
 
+static void init_buffer_target_class( VALUE modBfd ) {
+	clsBufferTarget = rb_define_class_under(modBfd, BUFFER_TGT_CLASS_NAME, 
+					  clsTarget);
+	rb_define_singleton_method(clsBufferTarget, "ext_new", 
+				  cls_buf_target_new, 3);
+	// TODO: on object free, close file descriptor
+}
+
 /* ---------------------------------------------------------------------- */
 /* BFD Module */
 
 void Init_BFDext() {
+	symFileno = rb_intern("fileno");
+	symPath = rb_intern("path");
+
 	modBfd = rb_define_module(BFD_MODULE_NAME);
 
 	init_target_class(modBfd);
+	init_buffer_target_class(modBfd);
 	init_section_class(modBfd);
 	init_symbol_class(modBfd);
 }
