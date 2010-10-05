@@ -543,6 +543,15 @@ class TC_BfdModule < Test::Unit::TestCase
     Bfd::Target.from_buffer( TARGET_BUF ) do |tgt|
 
       # These values were obtained by running BFD on the original file
+      assert_equal( 'object', tgt.format )
+      assert_equal( 'elf', tgt.flavour )
+      assert_equal( 'elf64-x86-64', tgt.type )
+      assert_equal( 'i386:x86-64', tgt.arch_info[:architecture] )
+      assert_equal( 64, tgt.arch_info[:bits_per_word] )
+      assert_equal( 64, tgt.arch_info[:bits_per_address] )
+      assert_equal( 8, tgt.arch_info[:bits_per_byte] )
+      assert_equal( 3, tgt.arch_info[:section_align_power] )
+
       assert_equal( 27, tgt.sections.length )
       assert_equal( '.bss', tgt.sections.keys.sort.first )
       assert_equal( '.text', tgt.sections.keys.sort.last )
@@ -553,7 +562,6 @@ class TC_BfdModule < Test::Unit::TestCase
       assert_equal( '(null)', tgt.symbols.keys.sort.first )
       assert_equal( '__libc_start_main', tgt.symbols.keys.sort.last )
       assert_equal( 0, tgt.symbols['__libc_start_main'].value )
-      
     end
   end
 
@@ -577,30 +585,13 @@ class TC_BfdModule < Test::Unit::TestCase
   end
 
   def test_unix_exec_file
+    # Attempt to load BFD for /bin/cat if it exists
     path = File::SEPARATOR + 'bin' + File::SEPARATOR + 'cat'
     return if not File.exist?(path)
 
-    # verify that file is identified as an executable (we don't know what kind)
-    #ident = ''
-    #File.open(path, 'rb') do |f|
-    #  ident = Magic::identify(f)
-    #  assert( ident =~ /executable/ )
-    #end
-
-    # compare against output of file(1) command
-    #cmd_ident = `file #{path}`.split(':')[1]
-    #cmd_ident = (cmd_ident) ? cmd_ident.strip : ''
-    #assert_equal( cmd_ident, ident)
-  end
-
-  def test_unix_data_file
-    #path = File::SEPARATOR + 'etc' + File::SEPARATOR + 'group'
-    #return if not File.exist?(path)
-
-    #File.open(path, 'rb') do |f|
-    #  magic = Magic::identify(f)
-    #  assert_equal( magic, 'ASCII text' ) 
-    #end
+    Bfd::Target.new( path ) do |tgt|
+      assert_equal( 'object', tgt.format )
+    end
   end
 
 end
