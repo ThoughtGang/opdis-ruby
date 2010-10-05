@@ -1,15 +1,14 @@
 # Makefile for BFD gem build
 
 NAME		= 	BFD
-GEMSPEC		=	$(NAME).gemspec
 
 ifeq "$(RUBY_VERSION)" ""
 RUBY_VERSION	=	1.9
 endif
 export RUBY_VERSION
 
-GEM		=	gem$(RUBY_VERSION)
 RUBY		=	ruby$(RUBY_VERSION)
+RAKE		=	rake$(RUBY_VERSION)
 
 # ----------------------------------------------------------------------
 #  TARGETS
@@ -23,7 +22,13 @@ all:
 gem:
 	echo Building $(NAME) gem
 	[ -e module/Makefile ] && (cd module && make clean)
-	$(GEM) build $(GEMSPEC)
+	$(RAKE) gem
+
+test:
+	$(RAKE) test
+
+doc:
+	$(RAKE) rdoc
 
 clean: 
 	echo Cleaning $(NAME) build dir
