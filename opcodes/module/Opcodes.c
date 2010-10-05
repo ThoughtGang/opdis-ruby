@@ -310,6 +310,7 @@ static void unload_target( struct disasm_target * tgt ) {
 static void disasm_init( struct disassemble_info * info, 
 			 struct disasm_target * target, bfd_vma * vma, 
 			 VALUE class, VALUE tgt, VALUE hash ) {
+	const char *opts;
 	bfd_vma vma_arg;
 	VALUE var;
 
@@ -409,8 +410,8 @@ static VALUE cls_disasm_new(VALUE class, VALUE hash) {
 
 
 	/* libopcodes disassembler options string */
-	var = rb_hash_lookup2(hash, str_to_sym(DIS_ARG_OPTS), rb_str_new2(""));
-	rb_iv_set(instance, IVAR(DIS_ATTR_OPTIONS), var );
+	var = rb_hash_lookup2(hash, str_to_sym(DIS_ARG_OPTS), 
+			      rb_str_new_cstr(""));
 
 	/* -- Get Disassembler Function (print-insn-*) */
 	/* default to hex dump */

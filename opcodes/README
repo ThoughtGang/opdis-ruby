@@ -7,7 +7,7 @@ BUILD
 
 The standard C extension build process is used:
 
-	bash# ruby1.9 extconf.rb
+	bash# ruby extconf.rb
 	bash# make
 
 Note that the Ruby headers must be installed. On Ubuntu, these are in the
@@ -66,15 +66,6 @@ This makes it possible to force compilation of support for specific
 architectures when there is no working objdump present. Note that libopcodes
 must have been compiled with support for the architectures, or you will get
 runtime errors.
-
-
-RUBY 1.8 SUPPORT
-
-...is not available. Attempts to backport the 1.9 extension to 1.8 resulted
-in the 1.8 interpreter aborting whenever an instance variable was accessed.
-
-Any user of 1.8 is welcome to submit a patch which provides 1.8 support
-without breaking 1.9 support.
 
 
 EXAMPLES
