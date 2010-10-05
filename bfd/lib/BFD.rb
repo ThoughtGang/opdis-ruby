@@ -5,8 +5,6 @@
 require 'BFDext'            # Load C extension wrapping libbfd.so
 require 'tempfile'          # For buffer target
 
-# TODO: inspect() methods for these classes
-
 module Bfd
 
   class Target
@@ -151,6 +149,14 @@ Return the Bfd::Section in the target that contains <i>vma</i>, or <i>nil</i>.
 
       return nil
     end
+
+    def to_s
+      "[#{@id}] #{@filename}"
+    end
+
+    def inspect
+      "#{self.to_s} : #{self.flavour} #{@format} (#{@type} #{endian}-endian)"
+    end
   end
 
   class Section
@@ -202,6 +208,14 @@ See raw_flags.
       return f
     end
 
+    def to_s
+      @name
+    end
+
+    def inspect
+      spec = "%X (%X), %X" % [ @vma, @file_pos, @size ]
+      "[#{@id}] #{@name} #{spec}, #{flags.join('|')}"
+    end
   end
 
   class Symbol
@@ -243,6 +257,14 @@ See raw_flags.
       f = []
       FLAGS.each { |k,v| f << v if (@raw_flags & k > 0) }
       return f
+    end
+
+    def to_s
+      "#{@name} (#{@binding})"
+    end
+
+    def inspect
+      "%s 0x%X %s" % [@name, @value, flags.join('|')]
     end
 
   end
