@@ -48,6 +48,7 @@ Rake::RDocTask.new do |rd|
   rd.rdoc_dir = 'doc/html'
   rd.rdoc_files << 'README.rdoc'
   rd.rdoc_files += Dir['lib/BFD.rb']
+  rd.rdoc_files += Dir['module/rdoc_input/*.rb']
 end
 
 # ----------------------------------------------------------------------

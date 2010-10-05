@@ -1,26 +1,27 @@
-#!/usr/bin/env ruby1.9
+#!/usr/bin/env ruby
 # Show BFD Info
 # Copyright 2010 Thoughtgang <http://www.thoughtgang.org>
 
 require 'BFD'
 
 def display_info(filename)
-  tgt = Bfd::Target.new(filename)
-  puts "#{tgt.id}: #{tgt.filename}"
+  Bfd::Target.new(filename) do |tgt|
+    puts "#{tgt.id}: #{tgt.filename}"
 
-  puts "#{tgt.flavour} #{tgt.format}: #{tgt.format_flags.join(',')}"
+    puts "#{tgt.flavour} #{tgt.format}: #{tgt.format_flags.join(',')}"
 
-  puts "#{tgt.type}: #{tgt.type_flags.join(',')}"
+    puts "#{tgt.type}: #{tgt.type_flags.join(',')}"
 
-  puts "#{tgt.sections.length} Sections #{tgt.symbols.length} Symbols"
+    puts "#{tgt.sections.length} Sections #{tgt.symbols.length} Symbols"
 
-  puts "Info:"
-  info = tgt.arch_info
-  info[:endian] = tgt.endian
-  info[:entry] = "0x%X" % (tgt.start_address) if tgt.start_address
-  info.keys.sort.each {|k| puts "\t#{k}: #{info[k]}" } 
+    puts "Info:"
+    info = tgt.arch_info
+    info[:endian] = tgt.endian
+    info[:entry] = "0x%X" % (tgt.start_address) if tgt.start_address
+    info.keys.sort.each {|k| puts "\t#{k}: #{info[k]}" } 
 
-  puts
+    puts
+  end
 end
 
 if __FILE__ == $0

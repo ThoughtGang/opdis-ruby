@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby1.9
+#!/usr/bin/env ruby
 # List BFD Symbols
 # Copyright 2010 Thoughtgang <http://www.thoughtgang.org>
 
@@ -12,10 +12,11 @@ def display_symbol(sym)
 end
 
 def list_syms(filename)
-  tgt = Bfd::Target.new(filename)
-  puts "#{tgt.id}: #{tgt.filename}"
-  tgt.symbols.keys.sort.each { |name| display_symbol tgt.symbols[name] }
-  puts
+  Bfd::Target.new(filename) do |tgt|
+    puts "#{tgt.id}: #{tgt.filename}"
+    tgt.symbols.keys.sort.each { |name| display_symbol tgt.symbols[name] }
+    puts
+  end
 end
 
 if __FILE__ == $0

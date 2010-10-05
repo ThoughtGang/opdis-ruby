@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby1.9
+#!/usr/bin/env ruby
 # List BFD Sections
 # Copyright 2010 Thoughtgang <http://www.thoughtgang.org>
 
@@ -12,10 +12,11 @@ def display_section(sec)
 end
 
 def list_secs(filename)
-  tgt = Bfd::Target.new(filename)
-  puts "#{tgt.id}: #{tgt.filename}"
-  tgt.sections.values.sort_by { |s| s.index }.each { |s| display_section s }
-  puts
+  Bfd::Target.new(filename) do |tgt
+    puts "#{tgt.id}: #{tgt.filename}"
+    tgt.sections.values.sort_by { |s| s.index }.each { |s| display_section s }
+    puts
+  end
 end
 
 if __FILE__ == $0

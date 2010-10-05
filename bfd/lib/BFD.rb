@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby1.9
+#!/usr/bin/env ruby
 # Copyright 2010 Thoughtgang <http://www.thoughtgang.org>
 # Ruby additions to BFD module
 
