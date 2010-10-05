@@ -6,7 +6,7 @@ require 'test/unit'
 require 'rubygems'
 require 'BFD'
 
-class TC_MagicIdent < Test::Unit::TestCase
+class TC_BfdModule < Test::Unit::TestCase
 
   # Note: this is an x86-64 GCC compilation of the very basic C program
   #                 int main(void) { return 666; }
@@ -537,12 +537,43 @@ class TC_MagicIdent < Test::Unit::TestCase
                 73 75 5f 69 6e 69 74 00 5f 5f 62 73 73 5f 73 74
                 61 72 74 00 5f 65 6e 64 00 5f 65 64 61 74 61 00
                 6d 61 69 6e 00 5f 69 6e 69 74 00
-               }.collect{ |i| i.hex }.join('')
+               }.collect{ |i| i.hex }.pack('C*')
 
   def test_buffer
     Bfd::Target.from_buffer( TARGET_BUF ) do |tgt|
-      # TODO
+
+      # These values were obtained by running BFD on the original file
+      assert_equal( 27, tgt.sections.length )
+      assert_equal( '.bss', tgt.sections.keys.sort.first )
+      assert_equal( '.text', tgt.sections.keys.sort.last )
+      assert_equal( 0x4003E0, tgt.sections['.text'].vma )
+      assert_equal( 0x1C8, tgt.sections['.text'].size )
+      assert_equal( 0x3E0, tgt.sections['.text'].file_pos )
+      assert_equal( 30, tgt.symbols.length )
+      assert_equal( '(null)', tgt.symbols.keys.sort.first )
+      assert_equal( '__libc_start_main', tgt.symbols.keys.sort.last )
+      assert_equal( 0, tgt.symbols['__libc_start_main'].value )
+      
     end
+  end
+
+  def test_file
+    tmp = Tempfile.new('ut-bfd-target')
+    tmp.write(TARGET_BUF)
+
+    # Test BFD handling of file by path
+    Bfd::Target.new( tmp.path ) do |tgt|
+      assert_equal( 27, tgt.sections.length )
+    end
+
+    # Test BFD handling of IO object
+    File.open(tmp.path, 'rb') do |f|
+      Bfd::Target.new( tmp.path ) do |tgt|
+        assert_equal( 27, tgt.sections.length )
+      end
+    end
+
+    tmp.close
   end
 
   def test_unix_exec_file

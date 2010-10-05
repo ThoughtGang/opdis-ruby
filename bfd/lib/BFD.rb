@@ -5,6 +5,8 @@
 require 'BFDext'            # Load C extension wrapping libbfd.so
 require 'tempfile'          # For buffer target
 
+# TODO: inspect() methods for these classes
+
 module Bfd
 
   class Target
@@ -53,6 +55,9 @@ called. The temp file is deleted when Target.close is called.
 =begin rdoc
 Create a new Target from a path or IO object. This just wraps for ext_new
 and provides a default value for args.
+NOTE: target should either be the path to a file or an IO object with a valid 
+read-only (i.e. opened with 'rb' flags) file descriptor returned by fileno(). 
+File descriptors opened for write ('wb') will be rejected by libbfd.
 =end
     def self.new(target, args={})
       bfd = ext_new(target, args)
@@ -70,7 +75,7 @@ block to this method.
       f = Tempfile.new( 'bfd_target' )
       f.write(buf)
 
-      bfd = ext_new(f, args)
+      bfd = ext_new(f.path, args)
       raise "Unable to construct BFD" if not bfd
 
       if not block_given?
@@ -84,8 +89,14 @@ block to this method.
       nil
     end
 
+=begin rdoc
+Free any resources used by BFD Target
+=end
     def close
-      @temp_file.close if @temp_file
+      if @temp_file
+        @temp_file.close
+        @temp_file = nil
+      end
     end
 
 =begin rdoc

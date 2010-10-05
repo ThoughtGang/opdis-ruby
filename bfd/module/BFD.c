@@ -250,6 +250,11 @@ static VALUE cls_target_new(VALUE class, VALUE tgt, VALUE hash) {
 		}
 		fd = NUM2INT(fd_val);
 		abfd = bfd_fdopenr (path, NULL, fd);
+		if (! abfd ) {
+			bfd_error_type err = bfd_get_error();
+			rb_raise(rb_eRuntimeError, "BFD error (%d) in open: %s",
+				 err, bfd_errmsg(err) );
+		}
 
 	} else if ( Qtrue == rb_obj_is_kind_of( tgt, rb_cString) ) {
 		char * path = StringValuePtr(tgt);
