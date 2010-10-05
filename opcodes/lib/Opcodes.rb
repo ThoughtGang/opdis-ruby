@@ -9,7 +9,9 @@ module Opcodes
   class Disassembler
 
     def self.new(args={})
-      ext_new(args)
+      dis = ext_new(args)
+      yield dis if block_given?
+      dis
     end
 
 =begin rdoc
