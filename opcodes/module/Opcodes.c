@@ -111,6 +111,7 @@ static const char * insn_type_to_str( enum dis_insn_type t ) {
 /* Disassembler class */
 
 /* libopcodes callback */
+/* this appends the tokens emitted by libopcodes to the insn array */
 static int disasm_fprintf( void * stream, const char * format, ... ) {
 	char buf[DISASM_MAX_STR];
 	int rv;
@@ -119,6 +120,7 @@ static int disasm_fprintf( void * stream, const char * format, ... ) {
 	va_list args;
 	va_start (args, format);
 	rv = vsnprintf( buf, DISASM_MAX_STR - 1, format, args );
+printf("'%s'", buf);
 	rb_ary_push( ary, rb_str_new_cstr(buf) ); 
         va_end (args);
 
@@ -183,6 +185,7 @@ static VALUE disasm_insn( struct disassemble_info * info, bfd_vma vma,
 	rb_hash_aset( hash, str_to_sym(DIS_INSN_SIZE), INT2NUM(size) );
 	rb_hash_aset( hash, str_to_sym(DIS_INSN_INFO), disasm_insn_info(info) );
 	rb_hash_aset( hash, str_to_sym(DIS_INSN_INSN), rb_ary_dup(ary) );
+printf("\n");
 
 	return hash;
 }
@@ -234,6 +237,7 @@ static void config_libopcodes_for_target( struct disassemble_info * info,
 		info->buffer = tgt->buf;
 	}
 
+	/* get disassembler function */
 	if ( tgt->abfd && (! info->application_data ||
 	     info->application_data == generic_print_address_wrapper) ) {
 		info->application_data = fn_for_bfd( tgt->abfd );
@@ -412,6 +416,7 @@ static VALUE cls_disasm_new(VALUE class, VALUE hash) {
 	/* libopcodes disassembler options string */
 	var = rb_hash_lookup2(hash, str_to_sym(DIS_ARG_OPTS), 
 			      rb_str_new_cstr(""));
+	rb_iv_set(instance, IVAR(DIS_ATTR_OPTIONS), var);
 
 	/* -- Get Disassembler Function (print-insn-*) */
 	/* default to hex dump */
@@ -434,7 +439,7 @@ static VALUE cls_disasm_new(VALUE class, VALUE hash) {
 		}
 	}
 
-	/* configura architecture manually, if provided */
+	/* configure architecture manually, if provided */
 	var = rb_hash_lookup(hash, str_to_sym(DIS_ARG_ARCH));
 	if ( var != Qnil) {
 		config_disasm_arch(info, var);
