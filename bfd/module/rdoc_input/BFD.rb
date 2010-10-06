@@ -222,7 +222,7 @@ Source: <b>bfd.arch_info</b> (see <b>struct bfd_arch_info</b>)
 Flavour of BFD file, e.g. ELF, COFF, AOUT, etc.
 Source: <b>bfd.flavour</b> 
 =end
-    attr_reader :flavour
+    attr_reader :raw_flavour
 
 =begin rdoc
 Kind of target, e.g. elf64-x86-64.
