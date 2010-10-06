@@ -55,8 +55,15 @@ end
 # ----------------------------------------------------------------------
 desc 'Run unit tests'                                                           
 Rake::TestTask.new do |t|
+    # path to local copy of Opcodes module and .so 
     t.libs << Dir.pwd + File::SEPARATOR + 'lib'
     t.libs << Dir.pwd + File::SEPARATOR + 'module'
+
+    # path to local copy of BFD module and .so 
+    bfd_dir = Dir.pwd + File::SEPARATOR + '..' + File::SEPARATOR + 'bfd'
+    t.libs << bfd_dir + File::SEPARATOR + 'lib'
+    t.libs << bfd_dir + File::SEPARATOR + 'module'
+
     t.test_files = UNIT_TEST_FILES
     t.verbose = true
     t.warning = true                    # Run ruby with -w
