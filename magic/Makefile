@@ -2,11 +2,6 @@
 
 NAME		= 	Magic
 
-ifeq "$(RUBY_VERSION)" ""
-RUBY_VERSION	=	1.9
-endif
-export RUBY_VERSION
-
 RUBY		=	ruby$(RUBY_VERSION)
 RAKE		=	rake$(RUBY_VERSION)
 
