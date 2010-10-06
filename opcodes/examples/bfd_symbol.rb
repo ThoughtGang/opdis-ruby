@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby1.9
+#!/usr/bin/env ruby
 # Disassemble BFD Symbol
 # Copyright 2010 Thoughtgang <http://www.thoughtgang.org>
 
@@ -15,7 +15,7 @@ def disasm_symbols(filename, symbols)
   puts "#{tgt.id}: #{tgt.filename}"
 
   # Disassembler for BFD
-  disasm = Opcodes::Disassembler.new( bfd: tgt )
+  disasm = Opcodes::Disassembler.new( :bfd => tgt )
 
   # Disassemble until end of buffer is reached
   symbols.each do |name| 

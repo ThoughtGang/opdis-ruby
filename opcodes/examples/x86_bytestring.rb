@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby1.9
+#!/usr/bin/env ruby
 # Disassemble x86 Bytes
 # Copyright 2010 Thoughtgang <http://www.thoughtgang.org>
 
@@ -19,12 +19,12 @@ end
 # disassemble binary string using x86 architecture
 def disasm_bytes( bytes )
   # Disassembler for x86
-  disasm = Opcodes::Disassembler.new( arch: 'x86' )
+  disasm = Opcodes::Disassembler.new( :arch => 'x86' )
 
   # disassemble until end of buffer is reached
   pos = 0
   while ( pos < bytes.length )
-    insn = disasm.disasm_insn( bytes, vma: pos )
+    insn = disasm.disasm_insn( bytes, :vma => pos )
     print_insn insn, bytes
     pos += 1
   end
