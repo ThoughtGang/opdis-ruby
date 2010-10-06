@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby1.9
+#!/usr/bin/env ruby
 # Opdis Example: BFD Entry Point
 # Control-flow disassembly of a BFD object file from its entry point
 # Copyright 2010 Thoughtgang <http://www.thoughtgang.org>

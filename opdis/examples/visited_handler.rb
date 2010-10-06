@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby1.9
+#!/usr/bin/env ruby
 # Opdis Example: Visited Address Tracker
 # Custom Visited Address Tracker used in control-flow disassembly of 
 # BFD entry point
@@ -39,7 +39,7 @@ def disasm_entry( tgt )
   # custom resolver to use in disassembler
   tracker = CustomTracker.new
 
-  Opdis::Disassembler.new( addr_tracker: tracker ) do |dis|
+  Opdis::Disassembler.new( :addr_tracker => tracker ) do |dis|
 
     dis.disasm_entry( tgt ) do |insn|
       # Store instruction as having been visited

@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby1.9
+#!/usr/bin/env ruby
 # Opdis Example: X86Decoder
 # Custom X86 Decoder used in linear disassembly of array of bytes
 # Copyright 2010 Thoughtgang <http://www.thoughtgang.org>
@@ -31,7 +31,7 @@ def disasm_bytes( bytes )
   # custom decoder to use in disassembler
   decoder = CustomX86Decoder.new
 
-  Opdis::Disassembler.new( arch: 'x86', insn_decoder: decoder ) do |dis|
+  Opdis::Disassembler.new( :arch => 'x86', :insn_decoder => decoder ) do |dis|
 
     dis.disassemble( bytes ) { |i| print_insn(i) }
 

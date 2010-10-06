@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby1.9
+#!/usr/bin/env ruby
 # Opdis Example: Resolver
 # Custom Address Resolver used in control-flow disassembly of BFD entry point
 # Copyright 2010 Thoughtgang <http://www.thoughtgang.org>
@@ -169,7 +169,7 @@ def disasm_entry( tgt )
   # custom resolver to use in disassembler
   vm = CustomResolver.new
 
-  Disassembler.new( resolver: vm ) do |dis|
+  Disassembler.new( :resolver => vm ) do |dis|
 
     dis.disasm_entry( tgt ) do |insn|
       # Set register/stack contents based on insn

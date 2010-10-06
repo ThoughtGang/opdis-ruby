@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby1.9
+#!/usr/bin/env ruby
 # Opdis Example: Decoder
 # Custom Instruction Decoder used in linear disassembly of array of bytes
 # Copyright 2010 Thoughtgang <http://www.thoughtgang.org>
@@ -29,7 +29,7 @@ def disasm_bytes( bytes )
   # custom decoder to use in disassembler
   decoder = CustomDecoder.new
 
-  Opdis::Disassembler.new( insn_decoder: decoder ) do |dis|
+  Opdis::Disassembler.new( :insn_decoder => decoder ) do |dis|
 
     dis.disasm_entry( bytes ) { |i| print_insn(i) }
 

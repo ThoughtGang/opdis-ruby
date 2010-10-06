@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby1.9
+#!/usr/bin/env ruby
 # Copyright 2010 Thoughtgang <http://www.thoughtgang.org>
 # Linear disassembly of a section in a BFD object file
 
@@ -11,8 +11,9 @@ def disasm_file( file, arch, offset, length )
     file.rewind
   end
 
-  Opdis::Disassembler.new( arch: arch ) do |dis|
-    dis.disassemble( file, vma: offset, buffer_vma: 0, length: length ) do |i|
+  Opdis::Disassembler.new( :arch => arch ) do |dis|
+    opts = { :vma => offset, :buffer_vma => 0, :length=> length }
+    dis.disassemble( file, opts ) do |i|
       puts "%08X\t%s" % [i.vma, i.to_s]
     end
   end
@@ -26,5 +27,5 @@ if __FILE__ == $0
   offset = ARGV.length > 0 ? ARGV.shift.to_i : 0
   length = ARGV.length > 0 ? ARGV.shift.to_i : nil
 
-  File.open(filename, 'r') { |f| disasm_file( f, arch, offset, length ) }
+  File.open(filename, 'rb') { |f| disasm_file( f, arch, offset, length ) }
 end

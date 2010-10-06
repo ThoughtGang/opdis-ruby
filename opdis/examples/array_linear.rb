@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby1.9
+#!/usr/bin/env ruby
 # Opdis Example: Array
 # Linear disassembly of array of bytes
 # Copyright 2010 Thoughtgang <http://www.thoughtgang.org>
@@ -6,7 +6,7 @@
 require 'Opdis'
 
 def disasm_bytes( arch, bytes )
-  Opdis::Disassembler.new( arch: arch ) do |dis|
+  Opdis::Disassembler.new( :arch => arch ) do |dis|
     dis.disassemble( bytes ) { |i| puts i }
   end
 end

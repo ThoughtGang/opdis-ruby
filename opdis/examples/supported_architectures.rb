@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby1.9
+#!/usr/bin/env ruby
 # Copyright 2010 Thoughtgang <http://www.thoughtgang.org>
 # Print supported architectures to STDOUT
 

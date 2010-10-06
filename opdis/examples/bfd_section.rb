@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby1.9
+#!/usr/bin/env ruby
 # Opdis Example: BFD Section
 # Linear disassembly of a section in a BFD object file
 # Copyright 2010 Thoughtgang <http://www.thoughtgang.org>

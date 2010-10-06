@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby1.9
+#!/usr/bin/env ruby
 # Opdis Example: BFD Symbol
 # Disassembly of a BFD object file from named symbols
 # Copyright 2010 Thoughtgang <http://www.thoughtgang.org>
