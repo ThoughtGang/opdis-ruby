@@ -545,11 +545,10 @@ class TC_OpdisModuleBfd < Test::Unit::TestCase
 
     Bfd::Target.from_buffer( TARGET_BUF ) do |tgt|
 
-      ops = dis.disassemble( tgt.sections['.text'] )
-      assert_equal( 14, ops.length )
-      # not sure about this one...
-      #assert_equal( 'rex.RXB', ops[ops.keys.sort.first].mnemonic )
-      assert_equal( 'xor', ops[ops.keys.sort.last].mnemonic )
+      ops = dis.disasm_section( tgt.sections['.text'] )
+      assert_equal( 145, ops.length )
+      assert_equal( 'xor', ops[ops.keys.sort.first].mnemonic )
+      assert_equal( 'nop', ops[ops.keys.sort.last].mnemonic )
     end
 
   end
