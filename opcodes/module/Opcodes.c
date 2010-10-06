@@ -120,7 +120,6 @@ static int disasm_fprintf( void * stream, const char * format, ... ) {
 	va_list args;
 	va_start (args, format);
 	rv = vsnprintf( buf, DISASM_MAX_STR - 1, format, args );
-printf("'%s'", buf);
 	rb_ary_push( ary, rb_str_new_cstr(buf) ); 
         va_end (args);
 
@@ -185,7 +184,6 @@ static VALUE disasm_insn( struct disassemble_info * info, bfd_vma vma,
 	rb_hash_aset( hash, str_to_sym(DIS_INSN_SIZE), INT2NUM(size) );
 	rb_hash_aset( hash, str_to_sym(DIS_INSN_INFO), disasm_insn_info(info) );
 	rb_hash_aset( hash, str_to_sym(DIS_INSN_INSN), rb_ary_dup(ary) );
-printf("\n");
 
 	return hash;
 }

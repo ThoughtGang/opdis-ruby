@@ -10,10 +10,10 @@ def hex_buf( arr )
   arr.collect{ |i| i.hex }.pack('C*')
 end
 
-class TC_BfdModule < Test::Unit::TestCase
+class TC_OpcodesModule < Test::Unit::TestCase
 
   def test_nop
-    Opcodes::Disassembler.new do |dis|
+    Opcodes::Disassembler.new( :arch => 'x86') do |dis|
       buf = hex_buf( %w{ 90 90 90 } )
       ops = dis.disasm( buf )
       assert_equal( 3, ops.length )
