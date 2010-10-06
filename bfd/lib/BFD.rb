@@ -98,15 +98,6 @@ Free any resources used by BFD Target
     end
 
 =begin rdoc
-Return an array of the names of bit-flags that are set.
-=end
-    def flag_strings(flags)
-      f = []
-      FLAGS.each { |k,v| f << v if (flags & k > 0) }
-      return f
-    end
-
-=begin rdoc
 Return an array of the names of the file format flags that are set.
 See raw_format_flags.
 =end
@@ -157,6 +148,17 @@ Return the Bfd::Section in the target that contains <i>vma</i>, or <i>nil</i>.
     def inspect
       "#{self.to_s} : #{self.flavour} #{@format} (#{@type} #{endian}-endian)"
     end
+
+    private
+=begin rdoc
+Return an array of the names of bit-flags that are set.
+=end
+    def flag_strings(flags)
+      f = []
+      FLAGS.each { |k,v| f << v if (flags & k > 0) }
+      return f
+    end
+
   end
 
   class Section
