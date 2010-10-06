@@ -34,4 +34,5 @@ doc:
 clean: 
 	echo Cleaning $(NAME) build dir
 	[ -e module/Makefile ] && (cd module && make clean)
+	[ -e module/Makefile ] && (cd module && make distclean)
 	rm -f *.gem
