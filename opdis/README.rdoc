@@ -1,0 +1,5 @@
+				Opdis
+
+A Ruby C extension (and gem) for the opdis library, available from
+	http://freshmeat.net/projects/opdis .
+
