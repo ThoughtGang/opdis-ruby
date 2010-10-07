@@ -138,6 +138,13 @@ See raw_format_flags and type_flags.
     end
 
 =begin rdoc
+Is Target a valid BFD object (i.e. did BFD successfully parse it)
+=end
+  def valid?
+    @format != FORMAT_UNKNOWN
+  end
+
+=begin rdoc
 Is target a standalone executable
 =end
     def is_executable?
