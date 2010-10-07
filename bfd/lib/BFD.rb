@@ -23,9 +23,13 @@ library archive (.ar)
 =end
     FORMAT_ARCHIVE = 'archive'
 =begin rdoc
+unrecognized/unsupported file
+=end
+    FORMAT_UNKNOWN = 'unknown'
+=begin rdoc
 BFD object type
 =end
-    FORMATS = [ FORMAT_CORE, FORMAT_OBJECT, FORMAT_ARCHIVE ]
+    FORMATS = [ FORMAT_UNKNOWN, FORMAT_CORE, FORMAT_OBJECT, FORMAT_ARCHIVE ]
 
 =begin rdoc
 BFD file format.
