@@ -5,9 +5,28 @@
 require 'BFDext'            # Load C extension wrapping libbfd.so
 require 'tempfile'          # For buffer target
 
+# TODO: Support reloc, line no, debug
 module Bfd
 
   class Target
+
+=begin rdoc
+core dump
+=end
+    FORMAT_CORE = 'core'
+=begin rdoc
+linkable (executable, shared library) or relocatable object file
+=end
+    FORMAT_OBJECT = 'object'
+=begin rdoc
+library archive (.ar)
+=end
+    FORMAT_ARCHIVE = 'archive'
+=begin rdoc
+BFD object type
+=end
+    FORMATS = [ FORMAT_CORE, FORMAT_OBJECT, FORMAT_ARCHIVE ]
+
 =begin rdoc
 BFD file format.
 Defined in /usr/include/bfd.h : enum bfd_flavour
@@ -22,17 +41,26 @@ Defined in /usr/include/bfd.h : enum bfd_endian
 =end
     ENDIAN = %w{ big little unknown }
 
+# Note: other interesting flags such as HAS_RELOC, HAS_DEBUG will be handled
+#       by methods returning (empty?) collections of relocs/linenos/debug-syms.
+=begin rdoc
+=end
+    FLAG_EXEC = 'EXEC_P'
+=begin rdoc
+=end
+    FLAG_DYNAMIC = 'DYNAMIC'
+
 =begin rdoc
 File Format Flags.
 Defined in /usr/include/bfd.h : struct bfd 
 =end
     FLAGS = { 0x0001 => 'HAS_RELOC',
-              0x0002 => 'EXEC_P',
+              0x0002 => FLAG_EXEC,
               0x0004 => 'LINEN',
               0x0008 => 'DEBUG',
               0x0010 => 'SYMS',
               0x0020 => 'LOCALS',
-              0x0040 => 'DYNAMIC',
+              0x0040 => FLAG_DYNAMIC,
               0x0080 => 'WP_TEXT',
               0x0100 => 'D_PAGED',
               0x0200 => 'IS_RELAXABLE',
@@ -99,15 +127,42 @@ Free any resources used by BFD Target
 
 =begin rdoc
 Return an array of the names of the file format flags that are set.
-See raw_format_flags.
+See raw_format_flags and type_flags.
 =end
-    def format_flags()
+    def format_flags
       flag_strings(@raw_format_flags)
     end
 
 =begin rdoc
+Is target a standalone executable
+=end
+    def is_executable?
+      @format == FORMAT_OBJECT and format_flags.include? FLAG_EXEC
+    end
+
+=begin rdoc
+Is target a shared library file (.so)
+=end
+    def is_shared_object?
+      @format == FORMAT_OBJECT and format_flags.include? FLAG_DYNAMIC and
+                                   (not format_flags.include? FLAG_EXEC)
+    end
+
+=begin rdoc
+Is target a relocatable object (not an executable or .so)
+=end
+    def is_relocatable_object?
+      @format == FORMAT_OBJECT and (not format_flags.include? FLAG_DYNAMIC) and
+                                   (not format_flags.include? FLAG_EXEC)
+    end
+
+=begin rdoc
 Return an array of the names of the target type flags that are set.
-See raw_type_flags.
+Note: These are the 'backend' flags for the BFD target type, and seem
+to be a list of the flags *available* for the target type, not the list
+of flags which are *set*. The format_flags field should always be used to
+determine the flags which are set for a BFD target.
+See raw_type_flags and format_flags.
 =end
     def type_flags()
       flag_strings(@raw_type_flags)
