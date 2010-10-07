@@ -15,6 +15,7 @@
 #define MAGIC_OPT_COMPRESS "archive_contents"
 #define MAGIC_OPT_DEVICES "device_contents"
 #define MAGIC_OPT_MIME "mime"
+#define MAGIC_OPT_CHARSET "charset"
 #define MAGIC_OPT_APPLE "apple"
 #define MAGIC_OPT_MAGIC_FILE "magic_file"
 

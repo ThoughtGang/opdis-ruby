@@ -19,6 +19,10 @@ Options:
   :mime : Return the MIME type and encoding
   :apple :  Return the Apple creator and type
   :magic_file : Override the default magic.conf file
+NOTE: libmagic has a bug that results in the file descriptor being passed to it
+      being CLOSED after magic_descriptor() is called. Be advised that any
+      IO object passed to Magic.identfy() WILL BE CLOSED by the backend 
+      library.
 =end
 
   def self.identify( target, options={} )

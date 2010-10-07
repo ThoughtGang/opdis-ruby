@@ -24,7 +24,9 @@ static VALUE str_to_sym( const char * str ) {
 
 static const char * magic_for_io( magic_t magic, VALUE target ) {
 	/* File : pass file descr to magic */
+	/* NOTE: this closes the file descriptor! very bad! */
 	int fd = NUM2INT(rb_funcall(target, idFileNo, 0));
+	const char *m;
 
 	rb_thread_schedule();
 	return magic_descriptor( magic, fd );
@@ -85,7 +87,9 @@ static VALUE magic_method( VALUE mod, VALUE target, VALUE options ) {
 	/* user-specified options */
 	set_if_present( options, MAGIC_OPT_DEVICES, MAGIC_DEVICES, &flags );
 	set_if_present( options, MAGIC_OPT_COMPRESS, MAGIC_COMPRESS, &flags );
-	set_if_present( options, MAGIC_OPT_MIME, MAGIC_MIME, &flags );
+	set_if_present( options, MAGIC_OPT_MIME, MAGIC_MIME_TYPE, &flags );
+	set_if_present( options, MAGIC_OPT_CHARSET, MAGIC_MIME_ENCODING, 
+			&flags );
 	set_if_present( options, MAGIC_OPT_APPLE, MAGIC_APPLE, &flags );
 
 	magic_dict = magic_open( flags );
