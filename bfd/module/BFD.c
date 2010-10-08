@@ -199,7 +199,12 @@ static VALUE new_target_for_bfd(VALUE class, bfd * abfd, VALUE hash) {
 			 bfd_errmsg(err) );
 	}
 
-	bfd_check_format( abfd, bfd_object );
+	if (! bfd_check_format( abfd, bfd_object ) ) {
+		bfd_error_type err = bfd_get_error();
+		rb_raise(rb_eRuntimeError, 
+			"Unable to identify target format (%d): %s", err, 
+			 bfd_errmsg(err) );
+	}
 
 	if ( bfd_get_flavour( abfd ) == bfd_target_unknown_flavour ) {
 		/* we do not want to raise an exception, as the BFD is
@@ -258,7 +263,7 @@ static VALUE cls_target_new(VALUE class, VALUE tgt, VALUE hash) {
 
 	} else if ( Qtrue == rb_obj_is_kind_of( tgt, rb_cString) ) {
 		char * path = StringValuePtr(tgt);
-		abfd = bfd_openr (path, NULL);
+		abfd = bfd_openr(path, NULL);
 
 	} else {
 		rb_raise(rb_eArgError, "Bfd requires a path or IO object");
