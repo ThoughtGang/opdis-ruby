@@ -230,20 +230,73 @@ Return an array of the names of bit-flags that are set.
   class Section
 
 =begin rdoc
+From bfd.h:
+'Tells the OS to allocate space for this section when loading.
+ This is clear for a section containing debug information only.'
+=end
+    FLAG_ALLOC = 'ALLOC'
+=begin rdoc
+From bfd.h:
+'Tells the OS to load the section from the file when loading.
+This is clear for a .bss section.'
+=end
+    FLAG_LOAD = 'LOAD'
+=begin rdoc
+From bfd.h:
+'The section contains data still to be relocated, so there is
+some relocation information too.'
+=end
+    FLAG_RELOC = 'RELOC'
+=begin rdoc
+From bfd.h:
+'A signal to the OS that the section contains read only data.'
+=end
+    FLAG_RO = 'READONLY'
+=begin rdoc
+From bfd.h:
+'The section contains code only.'
+=end
+    FLAG_CODE = 'CODE'
+=begin rdoc
+From bfd.h:
+'The section contains data only.'
+=end
+    FLAG_DATA = 'DATA'
+=begin rdoc
+From bfd.h:
+'The section contains constructor information. This section
+type is used by the linker to create lists of constructors and
+destructors used by <<g++>>. When a back end sees a symbol
+which should be used in a constructor list, it creates a new
+section for the type of name (e.g., <<__CTOR_LIST__>>), attaches
+the symbol to it, and builds a relocation. To build the lists
+of constructors, all the linker has to do is catenate all the
+sections called <<__CTOR_LIST__>> and relocate the data
+contained within - exactly the operations it would peform on
+standard data.'
+=end
+    FLAG_CTOR = 'CONSTRUCTOR'
+=begin rdoc
+From bfd.h:
+'The section contains thread local data.'
+=end
+    FLAG_LOCAL = 'THREAD_LOCAL'
+
+=begin rdoc
 Section flags.
 Defined in /usr/include/bfd.h : typedef struct bfd_section
 =end
-    FLAGS={ 0x00000001 => 'ALLOC',
-            0x00000002 => 'LOAD',
-            0x00000004 => 'RELOC',
-            0x00000008 => 'READONLY',
-            0x00000010 => 'CODE',
-            0x00000020 => 'DATA',
+    FLAGS={ 0x00000001 => FLAG_ALLOC,
+            0x00000002 => FLAG_LOAD,
+            0x00000004 => FLAG_RELOC,
+            0x00000008 => FLAG_RO,
+            0x00000010 => FLAG_CODE,
+            0x00000020 => FLAG_DATA,
             0x00000040 => 'ROM',
-            0x00000080 => 'CONSTRUCTOR',
+            0x00000080 => FLAG_CTOR,
             0x00000100 => 'HAS_CONTENTS',
             0x00000200 => 'NEVER_LOAD',
-            0x00000400 => 'THREAD_LOCAL',
+            0x00000400 => FLAG_LOCAL,
             0x00000800 => 'HAS_GOT_REF',
             0x00001000 => 'IS_COMMON',
             0x00002000 => 'DEBUGGING',
@@ -289,27 +342,101 @@ See raw_flags.
   class Symbol
     
 =begin rdoc
-Symbol flags.
-Defined in /usr/include/bfd.h : typedef struct bfd_symbol
+From bfd.h:
+'The symbol has local scope; <<static>> in <<C>>. The value
+is the offset into the section of the data.'
 =end
-    FLAGS={ 0x000001 => 'LOCAL',
-            0x000002 => 'GLOBAL',
-            0x000004 => 'DEBUGGING',
-            0x000008 => 'FUNCTION',
+    FLAG_LOCAL = 'LOCAL'
+=begin rdoc
+From bfd.h:
+'The symbol has global scope; initialized data in <<C>>. The
+value is the offset into the section of the data.'
+=end
+    FLAG_GLOBAL = 'GLOBAL'
+=begin rdoc
+From bfd.h:
+'The symbol is a debugging record. The value has an arbitrary
+meaning, unless BSF_DEBUGGING_RELOC is also set.'
+=end
+    FLAG_DEBUG = 'DEBUGGING'
+=begin rdoc
+From bfd.h:
+'The symbol denotes a function entry point.  Used in ELF,
+perhaps others someday.'
+=end
+    FLAG_FUNC = 'FUNCTION'
+=begin rdoc
+From bfd.h:
+'A weak global symbol, overridable without warnings by
+a regular global symbol of the same name.'
+=end
+    FLAG_WEAK = 'WEAK'
+=begin rdoc
+From bfd.h:
+'This symbol was created to point to a section, e.g. ELF's
+STT_SECTION symbols.'
+=end
+    FLAG_SEC = 'SECTION_SYM'
+=begin rdoc
+From bfd.h:
+'Signal that the symbol is the label of constructor section.'
+=end
+    FLAG_CTOR = 'CONSTRUCTOR'
+=begin rdoc
+From bfd.h:
+'Signal that the symbol is indirect.  This symbol is an indirect
+pointer to the symbol with the same name as the next symbol.'
+=end
+    FLAG_INDIRECT = 'INDIRECT'
+=begin rdoc
+From bfd.h:
+'BSF_FILE marks symbols that contain a file name.  This is used
+for ELF STT_FILE symbols.'
+=end
+    FLAG_FILE = 'FILE'
+=begin rdoc
+From bfd.h:
+'Symbol is from dynamic linking information.'
+=end
+    FLAG_DYNAMIC = 'DYNAMIC'
+=begin rdoc
+From bfd.h:
+'The symbol denotes a data object.  Used in ELF, and perhaps
+others someday.'
+=end
+    FLAG_OBJ = 'OBJECT'
+=begin rdoc
+From bfd.h:
+'This symbol is thread local.  Used in ELF.'
+=end
+    FLAG_THREAD = 'THREAD_LOCAL'
+
+=begin rdoc
+Symbol flags.
+Defined in /usr/include/bfd.h : typedef struct bfd_symbol.
+From bfd.h:
+'A normal C symbol would be one of:
+     <<BSF_LOCAL>>, <<BSF_COMMON>>,  <<BSF_UNDEFINED>> or
+     <<BSF_GLOBAL>>.'
+=end
+    FLAGS={ 0x000001 => FLAG_LOCAL,
+            0x000002 => FLAG_GLOBAL,
+            0x000004 => FLAG_DEBUG,
+            0x000008 => FLAG_FUNC,
             0x000020 => 'KEEP',
             0x000040 => 'KEEP_G',
-            0x000080 => 'WEAK',
-            0x000100 => 'SECTION_SYM',
+            0x000080 => FLAG_WEAK,
+            0x000100 => FLAG_SEC,
             0x000200 => 'OLD_COMMON',
             0x000400 => 'NOT_AT_END',
-            0x000800 => 'CONSTRUCTOR ',
+            0x000800 => FLAG_CTOR,
             0x001000 => 'WARNING',
-            0x002000 => 'INDIRECT',
-            0x004000 => 'FILE',
-            0x008000 => 'DYNAMIC',
-            0x010000 => 'OBJECT',
+            0x002000 => FLAG_INDIRECT,
+            0x004000 => FLAG_FILE,
+            0x008000 => FLAG_DYNAMIC,
+            0x010000 => FLAG_OBJ,
             0x020000 => 'DEBUGGING_RELOC',
-            0x040000 => 'THREAD_LOCAL',
+            0x040000 => FLAG_THREAD,
             0x080000 => 'RELC',
             0x100000 => 'SRELC',
             0x200000 => 'SYNTHETIC',
