@@ -1,0 +1,6 @@
+				Git-DB
+
+A gem providing a Git-backed database. This acts as a version-controlled
+data model.
+
+Requires Grit.
