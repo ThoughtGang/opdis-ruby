@@ -1,0 +1,156 @@
+#!/usr/bin/env ruby
+# :title: Git-DB::DB
+=begin rdoc
+
+Copyright 2011 Thoughtgang <http://www.thoughtgang.org>
+=end
+
+require 'fileutils'
+
+require 'git-db/repo'
+require 'git-db/model'
+require 'git-db/shared'
+
+# TODO: configuration
+#       actor for connection
+#       in transaction?
+# transaction
+#   stage { |idx|
+#     @current_idx = idx
+#     yield self
+#   }
+
+module GitDB
+
+  class RootItem
+    include GitDB::FsModelItem
+    # TODO: path is '/', etc
+  end
+
+=begin rdoc
+Exception raised when a closed database is accessed
+=end
+  class InvalidDbError < RuntimeError
+  end
+
+=begin rdoc
+Actually DbConnection to the repository.
+
+Note: all operations should be in exec or transaction blocks. These use a
+persistent staging index, and are more efficient.
+=end
+  class Database < Repo
+
+    # TODO: wrap get/set in mutex
+    attr_reader :current_index
+    attr_reader :stale
+
+=begin rdoc
+Return a connection to the Git DB.
+Creates the DB if it does not already exist.
+=end
+    def initialize(path)
+      if not File.exist? path
+        Repo.create(path)
+      end
+
+      @current_index = nil
+      @stale = false
+      super(path)
+    end
+
+=begin rdoc
+=end
+    def self.connect(path, create=true)
+      return nil if (not create) && (not File.exist? path)
+      new(path)
+    end
+
+=begin rdoc
+Close DB connection, writing all changes to disk.
+
+NOTE: This does not create a commit! Ony the staging index changes.
+=end
+    def close(save=true)
+      raise InvalidDbError if @stale
+
+      if save && @current_index
+        @current_index.write
+      end
+      @current_index = nil
+      @stale = true
+
+      # TODO: remove all locks etc
+    end
+
+=begin rdoc
+Delete Database (including entire repository) from disk.
+=end
+    def delete
+      raise InvalidDbError if @stale
+
+      close(false)
+      FileUtils.remove_dir(@path) if ::File.exist?(@path)
+    end
+
+    def current_index
+      # TODO: mutex
+      @current_index
+    end
+
+    def current_index=(idx)
+      # TODO: mutex
+      @current_index = idx
+    end
+
+=begin rdoc
+=end
+    def exec(&block)
+      raise InvalidDbError if @stale
+
+      return exec_in_current_index(&block) if self.current_index
+
+      self.current_index = StageIndex.new(self)
+      exec_in_current_index(&block)
+      self.current_index.write
+
+      self.current_index = nil
+    end
+
+    def transaction(&block)
+      raise InvalidDbError if @stale
+
+      return transaction_in_current_index(&block) if self.current_index
+
+      self.current_index = StageIndex.new(self)
+      transaction_in_current_index(&block)
+      self.current_index = nil
+    end
+
+    def branch_merge(&block)
+      raise InvalidDbError if @stale
+    # branch_merge...
+    #   Branch.new
+    #      name 'name'
+    #      ...
+    end
+
+
+    private
+=begin rdoc
+Execute code block in context of current DB index
+=end
+    def exec_in_current_index(&block)
+      yield self.current_index
+    end
+
+=begin rdoc
+Perform transaction in context of current DB index
+=end
+    def transaction_in_current_index(&block)
+      t = Transaction.new(self.current_index, &block)
+      t.perform
+    end
+
+  end
+end

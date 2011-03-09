@@ -12,6 +12,8 @@ require 'grit'
 require 'git-db/index'
 require 'git-db/shared'
 
+# TODO: locking ? config or something.
+
 module GitDB
 
 =begin rdoc
@@ -26,6 +28,8 @@ A Git repository
     DEFAULT_BRANCH='master'
     attr_reader :current_branch
 
+    attr_reader :path
+
     # TODO: something more intelligent
     def self.create(path)
       `git init #{path}`
@@ -37,14 +41,14 @@ Initialize a repo from the .git subdir in the given path.
 =end
     def initialize(path)
       path.chomp(GIT_DIR) if path.end_with? GIT_DIR
-      path = '.' if path.empty?
+      @path = (path.empty?) ? '.' : path
 
       # TODO: get last branch tag from repo
       #       prob as a git-config
       @last_branch_tag = DEFAULT_TAG
       @current_branch = DEFAULT_BRANCH
 
-      super(path + GIT_DIR)
+      super(@path + GIT_DIR)
     end
 
 =begin rdoc
