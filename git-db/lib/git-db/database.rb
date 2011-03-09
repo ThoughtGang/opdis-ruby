@@ -10,6 +10,7 @@ require 'fileutils'
 require 'git-db/repo'
 require 'git-db/model'
 require 'git-db/shared'
+require 'git-db/transaction'
 
 # TODO: configuration
 #       actor for connection
@@ -120,11 +121,35 @@ Delete Database (including entire repository) from disk.
     def transaction(&block)
       raise InvalidDbError if @stale
 
-      return transaction_in_current_index(&block) if self.current_index
+      return transaction_in_current_index(true, &block) if self.current_index
 
       self.current_index = StageIndex.new(self)
-      transaction_in_current_index(&block)
+      transaction_in_current_index(false, &block)
       self.current_index = nil
+    end
+
+=begin rdoc
+Wrapper for Grit::Repo#index that checks if Database has been closed.
+=end
+    def index
+      raise InvalidDbError if @stale
+      super
+    end
+
+=begin rdoc
+Wrapper for Grit::Repo#head that checks if Database has been closed.
+=end
+    def head
+      raise InvalidDbError if @stale
+      super
+    end
+
+=begin rdoc
+Wrapper for Grit::Repo#tree that checks if Database has been closed.
+=end
+    def tree(treeish = 'master', paths = [])
+      raise InvalidDbError if @stale
+      super
     end
 
     def branch_merge(&block)
@@ -147,8 +172,8 @@ Execute code block in context of current DB index
 =begin rdoc
 Perform transaction in context of current DB index
 =end
-    def transaction_in_current_index(&block)
-      t = Transaction.new(self.current_index, &block)
+    def transaction_in_current_index(nested, &block)
+      t = Transaction.new(self.current_index, nested, &block)
       t.perform
     end
 

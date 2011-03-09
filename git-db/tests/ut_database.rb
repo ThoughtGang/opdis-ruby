@@ -7,6 +7,21 @@ require 'fileutils'
 
 require 'git-db/database'
 
+# StageIndex that tracks the number of writes made
+class TestStageIndex < GitDB::StageIndex
+  attr_reader :write_count
+
+  def write
+    @write_count ||= 0
+    @write_count += 1
+    super
+  end
+
+  def clear_write_count
+    @write_count = 0
+  end
+end
+
 class TC_GitDatabaseTest < Test::Unit::TestCase
   TMP = File.dirname(__FILE__) + File::SEPARATOR + 'tmp'
 
@@ -43,6 +58,9 @@ class TC_GitDatabaseTest < Test::Unit::TestCase
     # verify that a closed database cannot be acted on
     # NOTE: this should verify ever
     assert_raise( GitDB::InvalidDbError ) { db.exec }
+    assert_raise( GitDB::InvalidDbError ) { db.head }
+    assert_raise( GitDB::InvalidDbError ) { db.tree }
+    assert_raise( GitDB::InvalidDbError ) { db.index }
     assert_raise( GitDB::InvalidDbError ) { db.transaction }
     assert_raise( GitDB::InvalidDbError ) { db.delete }
     assert_raise( GitDB::InvalidDbError ) { db.close }
@@ -84,7 +102,7 @@ class TC_GitDatabaseTest < Test::Unit::TestCase
     assert_nil(@db.current_index, 'exec created current index!')
 
     # Verify that the exec worked
-    index = GitDB::StageIndex.new(@db)
+    index = TestStageIndex.new(@db)
     blob = index.current_tree./(fname)
     assert_not_nil(blob, "db.exec did not create '#{fname}' in staging")
     assert_equal(data, blob.data, "BLOB data for '#{fname}' does not match")
@@ -97,10 +115,12 @@ class TC_GitDatabaseTest < Test::Unit::TestCase
     @db.current_index.write
     # TODO: why does this fail? 
     #assert_nil(blob, "db.exec did not delete '#{fname}' in staging")
+    #assert_equal(false, blob.data, "failed to delete '#{fname}' in staging")
 
     # test nested exec
     name1, data1 = 'test1', '!!##$$@@^^**&&%%'
     name2, data2 = 'test2', '_-_-_-'
+    @db.current_index.clear_write_count
     @db.exec { |idx|
       idx.add(name1, data1)
       @db.exec { |idx| idx.add(name2, data2) }
@@ -108,6 +128,8 @@ class TC_GitDatabaseTest < Test::Unit::TestCase
     assert_equal(index, @db.current_index, 
                  'nested db.exec clobbered current_index')
     @db.current_index.write
+    assert_equal(1, @db.current_index.write_count, 
+                 'Nested exec caused > 1 write!')
 
     # verify that both files in nested exec were created
     blob = index.current_tree./(name1)
@@ -127,8 +149,81 @@ class TC_GitDatabaseTest < Test::Unit::TestCase
 
   def test_transaction
     # test with no index
-    # test with current index
+    fname, data = 'test_file_1', 'abcdef'
+    @db.transaction { |trans,idx| idx.add(fname, data)  }
+    assert_nil(@db.current_index, 'transaction created current index!')
+
+    # Verify that the transaction worked
+    index = TestStageIndex.new(@db)
+    blob = index.current_tree./(fname)
+    assert_not_nil(blob, "db.exec did not create '#{fname}' in staging")
+    assert_equal(data, blob.data, "BLOB data for '#{fname}' does not match")
+    
+    # test rollback method
+    name1, data1 = 'test_file_2', '54321'
+    @db.transaction { |trans,idx|
+      idx.add(name1, data1)
+      trans.rollback
+    }
+    blob = index.current_tree./(name1)
+    assert_nil(blob, "rollback still created '#{name1}' in staging")
+
+    # test nested rollback
+    @db.transaction { |trans,idx|
+      idx.add(name1, data1)
+      @db.transaction { |t, i| t.rollback }
+    }
+    blob = index.current_tree./(name1)
+    assert_nil(blob, "rollback still created '#{name1}' in staging")
+    
+    # test rollback on raise
+    @db.transaction { |trans,idx|
+      idx.add(name1, data1)
+      raise "ROLLBACK!"
+    }
+    blob = index.current_tree./(name1)
+    assert_nil(blob, "transaction raise still created '#{name1}' in staging")
+
+    # test commit
+    msg = 'SUCCESS'
+    author, email = 'me', 'myself@i.com'
+    @db.transaction { |trans,idx|
+      trans.author 'me', 'myself@i.com'
+      trans.message msg
+    }
+    cmt = @db.commits.last
+    assert_not_nil(cmt, "transactoin did not create commit")
+    assert_equal(msg, cmt.message, "transaction commit has wrong message")
+    assert_equal(author, cmt.author.name, "transaction commit has wrong author")
+    assert_equal(email, cmt.author.email, "transaction commit has wrong email")
+
+    # test transaction with current_index set
+    @db.current_index = index
+    @db.transaction { |trans,idx| idx.delete(fname) }
+    blob = index.current_tree./(fname)
+    assert_equal(index, @db.current_index, 'db.exec clobbered current_index')
+
     # test nested transactions
+    name2, data2 = 'xtest2', '~~~~~~~'
+    @db.current_index.clear_write_count
+    @db.transaction { |trans,idx|
+      idx.add(name1, data1)
+      @db.transaction { |trans,idx| idx.add(name2, data2) }
+    }
+    index.write # existing index means both transactions are nested
+    assert_equal(index, @db.current_index, 
+                 'nested transaction clobbered current_index')
+    assert_equal(1, @db.current_index.write_count, 
+                 'Nested transaction caused > 1 write!')
+
+    # verify that both files in nested exec were created
+    blob = index.current_tree./(name1)
+    assert_not_nil(blob, "nested db.exec did not create '#{name1}' in staging")
+    assert_equal(data1, blob.data, "BLOB data for '#{name1}' does not match")
+
+    blob = index.current_tree./(name2)
+    assert_not_nil(blob, "nested db.exec did not create '#{name2}' in staging")
+    assert_equal(data2, blob.data, "BLOB data for '#{name2}' does not match")
   end
 
 end
