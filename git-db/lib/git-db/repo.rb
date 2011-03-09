@@ -13,6 +13,7 @@ require 'git-db/index'
 require 'git-db/shared'
 
 # TODO: locking ? config or something.
+# TODO: sort out tags/branch
 
 module GitDB
 
@@ -60,10 +61,10 @@ Return the top-level directory of the repo (the parent of .git).
 
 =begin rdoc
 Return true if path exists in repo (on fs or in-tree)
-=end
     def include?( path )
       fetch_blob(path) ? true: false
     end
+=end
 
 # ----------------------------------------------------------------------
 =begin rdoc
@@ -143,51 +144,40 @@ Return an empty git index for the repo.
     end
 
 =begin rdoc
-Return the SHA1 of the Git staging index.
+Return the staging index for the repo.
 =end
-    def stage_sha1()
-      # return SHA for root tree of index
-      exec_in_git_dir{`git write-tree`}.chomp
+    def staging
+      StageIndex.new(self)
     end
 
-=begin rdoc
-Return a Tree object for the Git staging index.
-=end
-    def stage_tree()
-      exec_in_git_dir { `git read-tree #{stage_sha1}` }
-      tree = tree(stage_sha1())
-      yield tree
-    end
+    # NOTE: stage_sha1 replaced by self.stage.sha
+    # NOTE: stage_tree replaced by self.tree(stage.sha). Could be replaced
+    #       by a private method.
 
-=begin rdoc
-Read in the Git staging index and yield it to block via Index#modify_tree.
+=begin rdoc 
+Yield staging index to the provided block, then write the index when the
+block returns.
 This allows the Git staging index to be modified from within Ruby, with all
 changes being visible to the Git command-line tools.
+Returns staging index for chaining purposes.
 =end
     def stage(&block)
-      sha = stage_sha1()
-      idx = index
-      idx.modify_tree(sha, &block)
+      idx = self.staging
+      yield idx
+      idx.write
+      idx
     end
 
-=begin rdoc
-Return an Array of the SHA1 for the parent (previous) commits for the staging 
-index. Default is one parent; 0 returns all parents.
-=end
-
-    def stage_parent_commit(max_count=1, head=@current_branch)
-      commits(head, max_count)
-    end
+    # NOTE: stage_commit replaced by stage_and_commit
 =begin rdoc
 Read the Git staging index, then commit it with the provided message and
 author info.
+Returns SHA of commit.
 =end
-    def stage_commit(msg, actor, head=@current_branch)
-      idx = index
-      idx.read_tree(stage_sha1())
-      parent = stage_parent_commit
+    def stage_and_commit(msg, actor=nil, head=@current_branch, &block)
+      idx = stage(&block)
+      parent = commits(head, 1)
       last_tree = parent.count > 0 ? parent.first.tree.id : nil
-      # return value is commit SHA
       idx.commit(msg, parent, actor, last_tree, head)
     end
 
@@ -195,7 +185,7 @@ author info.
 =begin rdoc
 Change to the Repo#top_level dir, yield to block, then pop the dir stack.
 =end
-    def exec_in_git_dir()
+    def exec_in_git_dir(&block)
       curr = Dir.getwd
       Dir.chdir top_level
       result = yield
@@ -206,17 +196,19 @@ Change to the Repo#top_level dir, yield to block, then pop the dir stack.
 =begin rdoc
 Execute the specified command using Repo#exec_in_git_dir.
 =end
-    def exec_git_cmd( cmd, actor )
+    def exec_git_cmd( cmd, actor=nil )
       old_aname = ENV['GIT_AUTHOR_NAME']
       old_aemail = ENV['GIT_AUTHOR_EMAIL']
       old_cname = ENV['GIT_COMMITTER_NAME']
       old_cemail = ENV['GIT_COMMITTER_EMAIL']
       old_pager = ENV['GIT_PAGER']
 
-      ENV['GIT_AUTHOR_NAME'] = actor.name
-      ENV['GIT_AUTHOR_EMAIL'] = actor.email
-      ENV['GIT_COMMITTER_NAME'] = actor.name
-      ENV['GIT_COMMITTER_EMAIL'] = actor.email
+      if actor
+        ENV['GIT_AUTHOR_NAME'] = actor.name
+        ENV['GIT_AUTHOR_EMAIL'] = actor.email
+        ENV['GIT_COMMITTER_NAME'] = actor.name
+        ENV['GIT_COMMITTER_EMAIL'] = actor.email
+      end
       ENV['GIT_PAGER'] = ''
 
       # Note: we cannot use Grit#raw_git_call as it requires an index file
@@ -230,28 +222,28 @@ Execute the specified command using Repo#exec_in_git_dir.
     end
 
 # ----------------------------------------------------------------------
+# TODO: needed? Should use models.
+    alias :add_files :add
+
+    # NOTE: add_fs_object replaced by add
+    # NOTE: add_db_object replaced by add
 =begin rdoc
-Add a DB entry at the filesystem path 'path' with contents 'contents'. This
-used the staging index.
+Add a DB entry at the filesystem path 'path' with contents 'data'. If
+'on_fs' is true, the file is created in the filesystem as well.
+This uses the staging index.
 =end
-    def add_db_object( path, data )
-      stage { |idx| idx.add_db_object(path, data) }
+    def add(path, data='', on_fs=false)
+      self.stage { |idx| idx.add(path, data, on_fs) }
     end
 
-=begin rdoc
-Add a DB entry at the virtual path 'path' with contents 'contents'. This uses
-the staging index.
-=end
-    def add_fs_object( path, data )
-      stage { |idx| idx.add_fs_object(path, data) }
-    end
-
+    # NOTE: fetch_object replaced by object_data
 =begin rdoc
 Fetch the contents of a DB or FS object from the object database. This uses
 the staging index.
 =end
-    def fetch_object(path)
-      blob = fetch_blob(path)
+    def object_data(path)
+      # TODO: Implement more effectively
+      blob = object_blob(path)
       blob ? blob.data : nil
     end
 
@@ -301,12 +293,15 @@ Get contents of tree, recursively.
 
 # ----------------------------------------------------------------------
     private
+
+    # NOTE: fetch_blob replaced by object_blob
 =begin rdoc
-Fetch the blob for a DB or FS object from the object database. This uses the
-staging index.
+Fetch a blob from the staging index based on an item path.
 =end
-    def fetch_blob(path)
-      stage_tree{ |tree| tree ? (tree./path) : nil }
+# was fetch_blob
+    def object_blob(path)
+      tree = self.tree(stage.sha)
+      tree ? (tree./path) : nil
     end
 
 =begin rdoc
@@ -315,6 +310,11 @@ Get SHA1 for path.
     def tree_sha1(path, head=@current_branch)
       contents = tree(head, [path]).contents
       contents.length > 0 ? contents.first.id : nil
+    end
+
+=begin rdoc
+=end
+    def add_fs(path, data)
     end
 
   end

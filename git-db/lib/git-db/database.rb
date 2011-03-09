@@ -111,7 +111,7 @@ Delete Database (including entire repository) from disk.
 
       return exec_in_current_index(&block) if self.current_index
 
-      self.current_index = StageIndex.new(self)
+      self.current_index = self.staging
       exec_in_current_index(&block)
       self.current_index.write
 
@@ -123,9 +123,15 @@ Delete Database (including entire repository) from disk.
 
       return transaction_in_current_index(true, &block) if self.current_index
 
-      self.current_index = StageIndex.new(self)
+      self.current_index = self.staging
       transaction_in_current_index(false, &block)
       self.current_index = nil
+    end
+
+=begin rdoc
+=end
+    def add(path, data='', on_fs=false)
+      exec { |idx| idx.add(path, data, on_fs) }
     end
 
 =begin rdoc
@@ -162,6 +168,7 @@ Wrapper for Grit::Repo#tree that checks if Database has been closed.
 
 
     private
+
 =begin rdoc
 Execute code block in context of current DB index
 =end
