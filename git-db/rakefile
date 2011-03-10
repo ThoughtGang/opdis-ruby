@@ -61,7 +61,7 @@ spec = Gem::Specification.new do |spec|
   spec.author = 'TG Community'
   spec.email = 'community@thoughtgang.org'
   spec.homepage = 'http://www.thoughtgang.org'
-  #spec.rubyforge_project = 'git-db'
+  spec.rubyforge_project = 'git-db'
   spec.licenses = [ "GPLv3" ]
 
   spec.required_ruby_version = '>= 1.8.7'
