@@ -147,7 +147,7 @@ Return an empty git index for the repo.
 Return the staging index for the repo.
 =end
     def staging
-      StageIndex.new(self)
+      @staging_index ||= StageIndex.new(self)
     end
 
     # NOTE: stage_sha1 replaced by self.stage.sha
@@ -308,8 +308,15 @@ Fetch a blob from the staging index based on an item path.
 Get SHA1 for path.
 =end
     def tree_sha1(path, head=@current_branch)
-      contents = tree(head, [path]).contents
-      contents.length > 0 ? contents.first.id : nil
+      # try staging index first
+      dir = staging.current_tree./path
+      #contents = staging.current_tree./(path).contents
+      # try repo if this fails (is this necessary?)
+      dir = tree(head, [path]) if (not dir.kind_of? Grit::Tree) ||
+                                  dir.contents.empty?
+      #contents = tree(head, [path]).contents if contents.empty?
+
+      dir.contents.length > 0 ? dir.contents.first.id : nil
     end
 
   end

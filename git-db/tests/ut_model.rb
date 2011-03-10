@@ -141,12 +141,18 @@ class TC_GitModelTest < Test::Unit::TestCase
   def test_db_model_item
     assert_equal(TestDbModelItem::NAME, TestDbModelItem.name,
                  'DbModelItem.name does not return class name')
+    assert_equal(0, @db.list_files(TestDbModelItem.path(@db.root)).count, 
+                 '>0 DbItems by default!')
+    #assert_equal(0, TestDbModelItem.list(
 
     # create an in-DB ModelItem
     id = '101'
     data = '00110011'
     TestDbModelItem.create @db.root, {:ident => id, :data => data }
+
     # is item in DB?
+    assert_equal(1, @db.list_files(TestDbModelItem.path(@db.root)).count, 
+                 'FsModelItem not created in DB')
     # is item NOT on FS?
     @db.exec_in_git_dir {
       assert( (not File.exist? TestDbModelItem.name + File::SEPARATOR + id),
@@ -160,6 +166,8 @@ class TC_GitModelTest < Test::Unit::TestCase
   def test_fs_model_item
     assert_equal(TestFsModelItem::NAME, TestFsModelItem.name,
                  'FsModelItem.name does not return class name')
+    assert_equal(0, @db.list_files(TestFsModelItem.path(@db.root)).count, 
+                 '>0 FsItems by default!')
 
     # create an on-FS ModelItem
     id = '102'
@@ -167,10 +175,12 @@ class TC_GitModelTest < Test::Unit::TestCase
     TestFsModelItem.create @db.root, {:ident => id, :data => data }
 
     # is item in DB?
+    assert_equal(1, @db.list_files(TestFsModelItem.path(@db.root)).count, 
+                 'FsModelItem not created in DB')
     # is item NOT on FS?
     @db.exec_in_git_dir {
       assert( (File.exist? TestFsModelItem.name + File::SEPARATOR + id),
-              "TestFsModelItem did not create file on disk!")
+              "TestFsModelItem did not create file on disk")
     }
     # can item be listed?
     # does property contain data?
