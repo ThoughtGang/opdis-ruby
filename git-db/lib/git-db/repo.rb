@@ -14,11 +14,14 @@ require 'git-db/shared'
 
 # TODO: locking ? config or something.
 # TODO: sort out tags/branch
+# TODO: When changing branch (head), be sure to change staging index.
 
 module GitDB
 
 =begin rdoc
-A Git repository
+A Git repository.
+
+Note: StagingIndex is cached, as it is from the command line.
 =end
   class Repo < Grit::Repo
     GIT_DIR = ::File::SEPARATOR + '.git'
@@ -310,11 +313,10 @@ Get SHA1 for path.
     def tree_sha1(path, head=@current_branch)
       # try staging index first
       dir = staging.current_tree./path
-      #contents = staging.current_tree./(path).contents
+
       # try repo if this fails (is this necessary?)
       dir = tree(head, [path]) if (not dir.kind_of? Grit::Tree) ||
                                   dir.contents.empty?
-      #contents = tree(head, [path]).contents if contents.empty?
 
       dir.contents.length > 0 ? dir.contents.first.id : nil
     end
