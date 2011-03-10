@@ -24,8 +24,40 @@ require 'git-db/transaction'
 module GitDB
 
   class RootItem
-    include GitDB::FsModelItem
-    # TODO: path is '/', etc
+    attr_reader :db
+
+    def initialize(db)
+      @db = db
+    end
+
+    def path
+      ''
+    end
+
+    def children
+      # TODO
+    end
+
+    def delete
+      # nop
+    end
+
+    def self.name
+      ''
+    end
+
+    def self.path
+      ''
+    end
+
+    def self.create(parent, args)
+      # nop
+    end
+
+    def self.list
+      # nop
+    end
+
   end
 
 =begin rdoc
@@ -45,6 +77,7 @@ persistent staging index, and are more efficient.
     # TODO: wrap get/set in mutex
     attr_reader :current_index
     attr_reader :stale
+    attr_reader :root
 
 =begin rdoc
 Return a connection to the Git DB.
@@ -57,6 +90,7 @@ Creates the DB if it does not already exist.
 
       @current_index = nil
       @stale = false
+      @root = RootItem.new(self)
       super(path)
     end
 

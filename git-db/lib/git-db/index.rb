@@ -107,7 +107,7 @@ Index object for the Git staging index.
     def commit(msg, author)
       parent = repo.commits(repo.current_branch, 1)
       last_tree = parent.count > 0 ? parent.first.tree.id : nil
-      super (msg, parent, author, last_tree, repo.current_branch) 
+      super(msg, parent, author, last_tree, repo.current_branch) 
     end
 
 =begin rdoc

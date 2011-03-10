@@ -9,6 +9,7 @@ require 'git-db/shared'
 require 'git-db/repo'
 
 # TODO: config can be used to set defaults!
+# TODO: cache
 
 module GitDB
 
@@ -26,13 +27,15 @@ Note: this is an instance-method module. It should be extended, not included.
 =end
     module ModelItem
 
+      attr_reader :path
+      attr_reader :parent
 =begin rdoc
 Git Repo for object.
 =end
-      attr_reader :repo
+      attr_reader :db
 
-      def repo=(repo)
-        @repo = repo
+      def db=(db)
+        @db = db 
       end
 
 =begin rdoc
@@ -54,10 +57,6 @@ to include their base dir and object ident.
         name
       end
 
-      def path
-        # return path to item
-      end
-
       def parent
         # return ModelItem of parent?
       end
@@ -76,7 +75,11 @@ to include their base dir and object ident.
 
       # formerly get property
       def property(name)
-        # return value of property. use setproperty to set
+        # return value of property. use set_property to set
+      end
+
+      def set_property(path, data)
+        raise RuntimeError, 'Abstract instance method called'
       end
 
     end
@@ -88,6 +91,51 @@ ModelItem class methods.
 Note: this is a class-method module. It should be included, not extended.
 =end
     module ModelItemClass
+
+=begin rdoc
+To be overridden by a modelitem class.
+=end
+      def name
+        raise RuntimeError, 'Abstract class method called'
+      end
+
+=begin rdoc
+=end
+      def path(parent)
+        return name if (not parent) || parent.path.empty?
+        parent.path + ::File::SEPARATOR + name
+      end
+
+=begin rdoc
+=end
+      def list(parent)
+      end
+
+=begin rdoc
+To be overridden by a modelitem class.
+=end
+      def ident(args)
+        args[:ident]
+      end
+
+=begin rdoc
+=end
+      def create(parent, args={})
+        raise "Use Database.root instead of nil for parent" if not parent
+        raise "parent is not a ModelItem" if not parent.respond_to? :db
+
+        db = parent.db
+        item_path = path(parent) + ::File::SEPARATOR + ident(args)
+        # NOTE: fill will create item dir when it creates properties
+        fill(db, item_path, args)
+      end
+
+=begin rdoc
+To be overridden by a modelitem class.
+=end
+      def fill(db, item_path, args)
+        raise RuntimeError, 'Abstract class method called'
+      end
     end
 
 # ----------------------------------------------------------------------
@@ -115,13 +163,13 @@ Note: Uses the staging index.
 
 # ----------------------------------------------------------------------
     module FsModelItemClass
-      extend ModelItemClass
+      include ModelItemClass
 
-      def create
-      end
+      #def create
+      #end
 
-      def list(parent)
-      end
+      #def list(parent)
+      #end
     end
 
 # ----------------------------------------------------------------------
@@ -148,12 +196,12 @@ Note: Uses the staging index.
 
 # ----------------------------------------------------------------------
     module DbModelItemClass
-      extend ModelItemClass
+      include ModelItemClass
 
-      def create
-      end
+      #def create
+      #end
 
-      def list(parent)
-      end
+      #def list(parent)
+      #end
     end
 end

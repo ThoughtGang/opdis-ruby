@@ -312,11 +312,6 @@ Get SHA1 for path.
       contents.length > 0 ? contents.first.id : nil
     end
 
-=begin rdoc
-=end
-    def add_fs(path, data)
-    end
-
   end
 
 end

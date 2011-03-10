@@ -8,6 +8,17 @@ require 'fileutils'
 require 'git-db/repo'
 require 'git-db/index'
 
+# TODO: write
+#       add_db
+#       add_fs
+#       add
+#       add true
+#       [add_fs_item]
+#       [make_parent_dirs]
+#       StageIndex
+#         commit
+#         write
+#         [read_sha1]
 class TC_GitIndexTest < Test::Unit::TestCase
   TMP = File.dirname(__FILE__) + File::SEPARATOR + 'tmp'
 
