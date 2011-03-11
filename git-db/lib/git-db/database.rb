@@ -165,7 +165,15 @@ Delete Database (including entire repository) from disk.
 =begin rdoc
 =end
     def add(path, data='', on_fs=false)
+#puts "ADD #{path}"
       exec { |idx| idx.add(path, data, on_fs) }
+    end
+
+    def list_children(path=root.path)
+      contents = list_tree(path)
+      contents['tree'] = {} if not contents['tree']
+      contents['blob'] = {} if not contents['blob']
+      contents['tree'].keys.concat(contents['blob'].keys).sort
     end
 
 =begin rdoc

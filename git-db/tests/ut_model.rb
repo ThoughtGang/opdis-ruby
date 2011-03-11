@@ -143,6 +143,7 @@ class TC_GitModelTest < Test::Unit::TestCase
                  'DbModelItem.name does not return class name')
     assert_equal(0, @db.list_files(TestDbModelItem.path(@db.root)).count, 
                  '>0 DbItems by default!')
+    puts TestDbModelItem.list(@db.root).inspect
     #assert_equal(0, TestDbModelItem.list(
 
     # create an in-DB ModelItem
@@ -159,6 +160,7 @@ class TC_GitModelTest < Test::Unit::TestCase
              "TestDbModelItem did not create file on disk!")
     }
     # can item be listed?
+    puts TestDbModelItem.list(@db.root).inspect
     # does property contain data?
   end
 

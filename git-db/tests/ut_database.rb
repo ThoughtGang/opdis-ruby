@@ -7,6 +7,8 @@ require 'fileutils'
 
 require 'git-db/database'
 
+# TODO: test staging
+
 # StageIndex that tracks the number of writes made
 class TestStageIndex < GitDB::StageIndex
   attr_reader :write_count

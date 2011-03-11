@@ -51,6 +51,7 @@ Add a DB entry at the virtual path 'path' with contents 'contents'
     alias :add_db :add
 
     def add(path, data, on_fs=false)
+puts "ADDING #{path}"
       super(path, data)
       add_fs_item(path, data) if on_fs
     end

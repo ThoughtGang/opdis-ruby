@@ -34,10 +34,10 @@ Note: StagingIndex is cached, as it is from the command line.
 
     attr_reader :path
 
-    # TODO: something more intelligent
+    # TODO: something more intelligent, e.g. with git/repo options
     def self.create(path)
-      `git init #{path}`
-      new(path)
+      Grit::Repo.init(path)
+      self.new(path)          # discard Grit::Repo object and use a Repo object
     end
 
 =begin rdoc
@@ -259,7 +259,9 @@ Return a 2-D hash of the tree:
 Top-level keys are 'commit', 'blob', 'link', 'tree'.
 =end
     def list_tree(path, head=@current_branch)
+#puts "LIST #{path}"
       sha = tree_sha1(path, head)
+#puts git.ruby_git.list_tree( sha ).inspect if sha
       sha ? git.ruby_git.list_tree( sha ) : {}
     end
 

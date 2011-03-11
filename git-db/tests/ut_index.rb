@@ -35,6 +35,27 @@ class TC_GitIndexTest < Test::Unit::TestCase
     FileUtils.remove_dir(TMP) if File.exist?(TMP)
   end
 
+  def test_index
+    name, data = 'test-file-1', '..!!..!!..'
+
+    idx = @repo.index
+    #idx.add(name, data)
+    #idx.write
+  end
+
+  def test_staging
+    file, data = 'misc/stuff/stage-test-1', 'ststststst'
+    idx = GitDB::StageIndex.new(@repo)
+    idx.add(file, data)
+    idx.write
+    @repo.exec_in_git_dir {
+      puts "git-ls-files --stage:"
+      puts `git ls-files --stage`
+    }
+    # puts @repo.list_tree('misc').inspect
+    # puts @repo.list_files('misc/stuff').inspect
+  end
+
   def test_dummy
     true
   end

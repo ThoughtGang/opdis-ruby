@@ -109,6 +109,7 @@ To be overridden by a modelitem class.
 =begin rdoc
 =end
       def list(parent)
+        parent.db.list_children path(parent)
       end
 
 =begin rdoc
