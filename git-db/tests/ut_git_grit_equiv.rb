@@ -1,6 +1,9 @@
 #!/usr/bin/env ruby
 # Copyright 2011 Thoughtgang <http://www.thoughtgang.org>
 # Unit tests to ensure that assumptions about Grit behaving like Git still hold.
+# Note: This is used to verify that Grit can be made to act like the Git
+#       command line, and to determine what Grit methods correspond to 
+#       Git commands.
 
 require 'test/unit'
 require 'fileutils'
@@ -36,7 +39,7 @@ require 'grit/git-ruby'
 # ls_tree sha, paths, recursive = false -> cat-file output
 # ls_tree_path(sha, path, append=nil) -> array of tree entries
 # get_subtree(commit_sha, path) -> tree sha (or parent of, or /)
-# 
+ 
 class TC_GitGritEquivalenceTest < Test::Unit::TestCase
   TMP = File.dirname(__FILE__) + File::SEPARATOR + 'tmp'
   GIT_REPO = 'git_repo'
@@ -65,10 +68,7 @@ class TC_GitGritEquivalenceTest < Test::Unit::TestCase
     rv
   end
 
-  def grit_exec(&block)
-    exec_in_dir(TMP + File::SEPARATOR + GRIT_REPO, &block)
-  end
-
+  # Create a Git repo and a Grit repo in a temporary directory
   def setup
     FileUtils.remove_dir(TMP) if File.exist?(TMP)
     Dir.mkdir(TMP)
@@ -82,10 +82,12 @@ class TC_GitGritEquivalenceTest < Test::Unit::TestCase
     @repo = Grit::Repo.init(@grit_path)
   end
 
+  # Delete all repos
   def teardown
     FileUtils.remove_dir(TMP) if File.exist?(TMP)
   end
 
+  # Test that initializing a repository produces the same results
   def test_init
     sep = File::SEPARATOR
     assert( File.exist?(TMP + sep + GIT_REPO + sep + '.git'),
@@ -94,6 +96,7 @@ class TC_GitGritEquivalenceTest < Test::Unit::TestCase
             'Grit repo was not created!')
   end
 
+  # Test that generating an object SHA produces the same results
   def test_object_sha
     data = '01020304050607080900!@#$%^&*()_+='
     git_sha = git_exec { `echo -n '#{data}' | git hash-object --stdin` }.chomp
@@ -101,6 +104,7 @@ class TC_GitGritEquivalenceTest < Test::Unit::TestCase
     assert_equal( git_sha, grit_sha, 'Git and Grit SHA differ')
   end
 
+  # Test that adding a Blob object produces the same results
   def test_add_blob_to_object_database
     data = '7654321098!@$#%^&*()_-=+'
     git_sha = git_exec {`echo -n '#{data}' | git hash-object -w --stdin`}.chomp
@@ -122,56 +126,62 @@ class TC_GitGritEquivalenceTest < Test::Unit::TestCase
     assert(File.exist?(@grit_path + path), 'Grit did not add blob to object DB')
   end
 
+  # Test that adding a Tree object produces the same results
   def test_add_path_to_object_database
-    # repo.git.ls_tree({}, treeish, *paths)
-    # output: lines of : mode, type, id, name = text.split(" ", 4)
-    #   git.ruby_git.ls_tree(sha, paths = [], recursive = false)
+    bdata = "123454321"
+    bsha = git_exec {`echo -n '#{bdata}' | git hash-object -w --stdin`}.chomp
+    grit_bsha = @repo.git.put_raw_object(bdata, 'blob')
+
+    tdata1 = "100644 blob #{bsha}\ttest_blob"
+    git_sha = git_exec {`echo -n '#{tdata1}' | git mktree`}.chomp
+
+    # Note the different format needed for Grit!
+    tdata1 = "100644 test_blob\0#{[bsha].pack('H*')}"
+    grit_sha = @repo.git.put_raw_object(tdata1, 'tree')
+    assert(@repo.git.object_exists?(grit_sha), 'Grit fails object_exists? call')
+    assert_not_nil( @repo.tree(grit_sha), 'Grit did not create valid tree')
+
+    assert_equal( git_sha, grit_sha, 'Git and Grit SHA differ')
   end
 
+  # Test that adding a Blob to the (staging) index produces the same results
   def test_add_blob_to_index
+    data = '....****....'
+    fname = 'test_add_blob'
+
+    # Add BLOB to Git object database
+    git_sha = git_exec {`echo -n '#{data}' | git hash-object -w --stdin`}.chomp
+    # Add BLOB to Git index
+    git_exec {`git update-index --add --cacheinfo 100644 #{git_sha} #{fname}`}
+    # Get SHA for filename in index
+    mode, sha, junk = git_exec { `git ls-files -s #{fname}` }.split(/\s/)
+    assert_equal(git_sha, sha, 'SHA in staging does not match input SHA')
+
+    idx = @repo.index
+    # Add BLOB to Grit index
+    idx.add( fname, data)
+    # Add BLOB to Grit object database and re-read
+    idx.read_tree(idx.write_tree(idx.tree))
+    # Get SHA for filename in index
+    blob = idx.current_tree/fname
+    assert_equal(data, blob.data, 'Grit index data does not match input data')
+
+    assert_equal( git_sha, blob.id, 'Git and Grit SHA differ')
   end
 
   def test_add_path_to_index
   end
 
-  def test_add_file_to_index
-    data = '0x0x0x0x0x0x0x0x0x'
-    sha = git_exec { `echo '#{data}' | git hash-object -w --stdin` }
-   # git_index_exec('git_addfile_index') {
-   #   `git read-tree --prefix=#{path} #{sha}`
-   # }
-
-
-
-    # git: `git update-index --add --cacheinfo 100644 #{sha} #{path}
+  def test_remove_file_from_object_database
   end
 
-#   `git read-tree --prefix=path #{sha}` will read SHA object into git at the
-#   specified path. git-write-tree can then be used to create the tree object
-  def test_read_tree_into_index
-    # git : `git read-tree --prefix=#{path} #{sha}`
-    # NOTE: git update-index also implicitly creates tree
-    #       git-mk-tree reads a tree structure from a listing
+  def test_remove_path_from_object_database
   end
 
-  def test_create_tree_from_index
-    # git : `git write-tree`
+  def test_remove_file_from_index
   end
 
-  def test_read_blob
-    # git : `git cat-file -p #{sha}`
-  end
-
-  def test_add_file
-    # git: echo 'content' > git-hash-object -w --stdin => SHA
-    #
-  end
-
-  def test_remove_file
-  end
-
-  def test_list_tree
-      #puts "git-ls-files --stage:"
+  def test_remove_path_from_index
   end
 
 end
