@@ -121,7 +121,7 @@ calling Target.close, or by passing a block to this method.
       # yield bfd object, then close temp file
       yield bfd
       f.close
-      f.unlink
+      File.unlink(path)
       nil
     end
 
@@ -132,7 +132,7 @@ Free any resources used by BFD Target
       if @temp_file
         path = @temp_file.path
         @temp_file.close
-        File.unlink(.path)
+        File.unlink(path)
         @temp_file = nil
       end
     end
