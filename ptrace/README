@@ -1,0 +1,37 @@
+
+			  	Ptrace
+
+A Ruby C extension (and gem) for the POSIX ptrace facility.
+
+
+BUILD
+-----
+
+The standard C extension build process is used:
+
+	bash# ruby extconf.rb
+	bash# make
+
+Note that the Ruby headers must be installed. On Ubuntu, these are in the
+ruby-dev or ruby1.9-dev package.
+
+
+The gem is built using the standard gem build command:
+
+	bash# gem build Ptrace.gemspec
+
+
+The top-level Makefile supports each of these builds with the commands
+'make' and 'make gem'.
+
+	bash# make
+	# builds C extension
+	bash# make gem
+	# builds the gem
+
+
+
+EXAMPLES
+
+Extended examples are provided in the 'examples' directory. The following
+code snippets give a brief overview of using the Ptrace extension.

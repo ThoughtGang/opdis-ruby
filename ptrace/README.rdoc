@@ -1,0 +1,4 @@
+=Ptrace
+==A Ruby C extension (and gem) for the POSIX ptrace facility.
+
+Copyright 2011 Thoughtgang <http://www.thoughtgang.org>
