@@ -1,2 +1,5 @@
+2011-05-25 :	mkfs <mkfs@thoughtgang.org>
+	*	Fixed usage of Tempfile for buffer targets
+	*	Version bump
 2010-08-16 :	mkfs <mkfs@thoughtgang.org>
 	*	Added license to gemspec.
