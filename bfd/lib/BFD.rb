@@ -96,16 +96,21 @@ File descriptors opened for write ('wb') will be rejected by libbfd.
     end
 
 =begin rdoc
-Instantiate target from a buffer instead of from a file. Note: this creates
-a temp_file which MUST be freed by calling Target.close, or by passing a 
-block to this method.
+Instantiate target from a buffer instead of from a file. 
+Note: this creates a temporary file which MUST be closed and unlinked by 
+calling Target.close, or by passing a block to this method.
 =end
     def self.from_buffer(buf, args={})
 
       f = Tempfile.new( 'bfd_target' )
-      f.write(buf)
+      path = f.path
+      f.close
 
-      bfd = ext_new(f.path, args)
+      f = File.open(path, 'wb')
+      f.write(buf)
+      f.rewind
+
+      bfd = ext_new(path, args)
       raise "Unable to construct BFD" if not bfd
 
       if not block_given?
@@ -116,6 +121,7 @@ block to this method.
       # yield bfd object, then close temp file
       yield bfd
       f.close
+      f.unlink
       nil
     end
 
@@ -124,7 +130,9 @@ Free any resources used by BFD Target
 =end
     def close
       if @temp_file
+        path = @temp_file.path
         @temp_file.close
+        File.unlink(.path)
         @temp_file = nil
       end
     end
