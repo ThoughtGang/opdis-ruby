@@ -15,7 +15,7 @@
 #define IVAR(attr) "@" attr
 
 static VALUE modPtrace;
-static VALUE clsDebugger;
+static VALUE clsDebug;
 
 
 static VALUE str_to_sym( const char * str ) {
@@ -46,6 +46,7 @@ static long int_ptrace_raw( enum __ptrace_request req, VALUE pid, void * addr,
 
 	tgt = PIDT2NUM(pid);
 	return ptrace(req, tgt, addr, data);
+	//if (rv == -1) strerror(err)
 }
 
 // internal wrapper for ptrace that converts PID to a pid_t, and converts
@@ -57,11 +58,8 @@ static VALUE int_ptrace( enum __ptrace_request req, VALUE pid, void * addr,
 }
 
 static VALUE int_ptrace_data( VALUE req, VALUE pid, VALUE addr, void * data ) {
-	enum __ptrace_request cmd;
-	void * tgt_addr; 
-
-	// convert req to __ptrace_request
-	// convert addr to void * (from Fixnum)
+	enum __ptrace_request cmd = (enum __ptrace_request_cmd) NUM2UINT(req);
+	void * tgt_addr = (void *) NUM2ULONG(addr);
 
 	return int_ptrace(cmd, pid, tgt_addr, data);
 }
@@ -92,12 +90,11 @@ static VALUE ptrace_send_data( VALUE req, VALUE pid, VALUE addr, VALUE data ) {
 //static VALUE ptrace_peek( enum __ptrace_request req, pid_t pid, void * addr ) 
 static VALUE ptrace_peek( VALUE type, VALUE pid, VALUE addr ) {
 	enum __ptrace_request cmd;
-	void * tgt_addr; 
+	void * tgt_addr = (void *) NUM2ULONG(addr); 
 	long rv;
 	VALUE word;
 
-	// convert addr to void * (from Fixnum)
-	rv = int_ptrace_raw(type, pid, addr);
+	rv = int_ptrace_raw(type, pid, tgt_addr);
 
 	// convert rv to binary string
 
@@ -155,7 +152,7 @@ static VALUE ptrace_set_siginfo( pid_t * pid, VALUE hash ) {
 	return Qnil;
 }
 
-static VALUE ptrace_get_eventmsg( pid_t * pid ) {
+static VALUE ptrace_eventmsg( pid_t * pid ) {
 	// alloc msg struct
 	// int_ptrace
 	// data to Hash
@@ -166,25 +163,20 @@ static VALUE ptrace_get_eventmsg( pid_t * pid ) {
 /* Debugger Class */
 
 static void init_debugger_class( VALUE modPtrace ) {
-	clsDebugger = rb_define_class_under(modPtrace, DEBUGGER_CLASS_NAME, 
+	clsDebug = rb_define_class_under(modPtrace, DEBUGGER_CLASS_NAME, 
 					    rb_cObject);
 
-	rb_define_singleton_method(clsDebugger, "send", ptrace_send, 3);
-	rb_define_singleton_method(clsDebugger, "send_data", ptrace_send_data, 
-				   4);
-	rb_define_singleton_method(clsDebugger, "peek", ptrace_peek, 3);
-	rb_define_singleton_method(clsDebugger, "poke", ptrace_poke, 4);
-	rb_define_singleton_method(clsDebugger, "regs", ptrace_get_regs, 1);
-	rb_define_singleton_method(clsDebugger, "regs=", ptrace_set_regs, 2);
-	rb_define_singleton_method(clsDebugger, "fpregs", ptrace_get_fpregs, 1);
-	rb_define_singleton_method(clsDebugger, "fpregs=", ptrace_set_fpregs, 
-				   2);
-	rb_define_singleton_method(clsDebugger, "signal", ptrace_get_siginfo, 
-				   1);
-	rb_define_singleton_method(clsDebugger, "signal=", ptrace_set_siginfo, 
-				   2);
-	rb_define_singleton_method(clsDebugger, "event_msg", 
-				   ptrace_get_eventmsg, 1);
+	rb_define_singleton_method(clsDebug, "send", ptrace_send, 3);
+	rb_define_singleton_method(clsDebug, "send_data", ptrace_send_data, 4);
+	rb_define_singleton_method(clsDebug, "peek", ptrace_peek, 3);
+	rb_define_singleton_method(clsDebug, "poke", ptrace_poke, 4);
+	rb_define_singleton_method(clsDebug, "regs", ptrace_get_regs, 1);
+	rb_define_singleton_method(clsDebug, "regs=", ptrace_set_regs, 2);
+	rb_define_singleton_method(clsDebug, "fpregs", ptrace_get_fpregs, 1);
+	rb_define_singleton_method(clsDebug, "fpregs=", ptrace_set_fpregs, 2);
+	rb_define_singleton_method(clsDebug, "signal", ptrace_get_siginfo, 1);
+	rb_define_singleton_method(clsDebug, "signal=", ptrace_set_siginfo, 2);
+	rb_define_singleton_method(clsDebug, "event_msg", ptrace_eventmsg, 1);
 }
 
 /* ---------------------------------------------------------------------- */
