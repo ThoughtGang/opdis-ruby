@@ -39,88 +39,127 @@ static VALUE str_to_sym( const char * str ) {
 // var = rb_hash_new();
 /* ---------------------------------------------------------------------- */
 
+static long int_ptrace_raw( enum __ptrace_request req, VALUE pid, void * addr, 
+			    void * data )  {
+	pid_t tgt;
+	long rv;
+
+	tgt = PIDT2NUM(pid);
+	return ptrace(req, tgt, addr, data);
+}
+
 // internal wrapper for ptrace that converts PID to a pid_t, and converts
 // return value to a Fixnum
 static VALUE int_ptrace( enum __ptrace_request req, VALUE pid, void * addr, 
 			void * data )  {
+	long rv = int_ptrace_raw(req, tgt, addr, data);
+	return LONG2NUM(rv);
 }
+
+static VALUE int_ptrace_data( VALUE req, VALUE pid, VALUE addr, void * data ) {
+	enum __ptrace_request cmd;
+	void * tgt_addr; 
+
+	// convert req to __ptrace_request
+	// convert addr to void * (from Fixnum)
+
+	return int_ptrace(cmd, pid, tgt_addr, data);
+}
+
 
 /* ---------------------------------------------------------------------- */
 /* PTRACE API */
 
+
 // generic (non-arg) use:
 //static VALUE ptrace_send( enum __ptrace_request req,  pid_t pid, void * addr) 
 static VALUE ptrace_send( VALUE req, VALUE pid, VALUE addr) {
-	// convert req to __ptrace_request
-	// convert addr to void * (from Fixnum)
-	// int_ptrace
+	return int_ptrace_data( req, pid, addr, NULL );
 }
 
-// for internal use: send with a data param
 // includes external ptrace_set_options
 // NOTE only use this for data that is NOT a memory address!
 //static VALUE ptrace_send_data( enum __ptrace_request req, pid_t pid, 
 //			       void * addr, void * data ) {
 static VALUE ptrace_send_data( VALUE req, VALUE pid, VALUE addr, VALUE data ) {
-	// convert req to __ptrace_request
-	// convert addr to void * (from Fixnum)
+	void * the_data;
 	// convert data to void * (from Fixnum)
-	// int_ptrace
+
+	return int_ptrace_send(req, pid, addr, the_data);
 }
 
 //peek_text, peek_data, peek_user
 //static VALUE ptrace_peek( enum __ptrace_request req, pid_t pid, void * addr ) 
 static VALUE ptrace_peek( VALUE type, VALUE pid, VALUE addr ) {
-	// convert req to __ptrace_request
+	enum __ptrace_request cmd;
+	void * tgt_addr; 
+	long rv;
+	VALUE word;
+
 	// convert addr to void * (from Fixnum)
-	// alloc a word
-	// int_ptrace
-	// convert word to binary string
+	rv = int_ptrace_raw(type, pid, addr);
+
+	// convert rv to binary string
+
+	return word;
 }
 
 //poke_text, poke_data, poke_user
 //static VALUE ptrace_poke( enum __ptrace_request req, pid_t pid, void * addr,
 //			  void * data ) {
 static VALUE ptrace_poke( VALUE req, VALUE pid, VALUE addr, VALUE data ) {
-	// convert req to __ptrace_request
-	// convert addr to void * (from Fixnum)
-	// alloc a word
+	void * the_data;
+
 	// convert data (Fixnum or Binary String) to word
-	// int_ptrace
+	return int_ptrace_send(req, pid, addr, the_data);
 }
 
 static VALUE ptrace_get_regs( pid_t * pid ) {
+	// alloc reg struct
 	// int_ptrace
 	// data to Hash
+	return Qnil;
 }
 
 static VALUE ptrace_set_regs( pid_t * pid, VALUE hash ) {
+	// alloc reg struct
 	// hash to data
 	// int_ptrace
+	return Qnil;
 }
 
 static VALUE ptrace_get_fpregs( pid_t * pid ) {
+	// alloc reg struct
 	// int_ptrace
 	// data to Hash
+	return Qnil;
 }
 
 static VALUE ptrace_set_fpregs( pid_t * pid, VALUE hash ) {
+	// alloc reg struct
 	// hash to data
 	// int_ptrace
+	return Qnil;
 }
 
 static VALUE ptrace_get_siginfo( pid_t * pid ) {
+	// alloc sig struct
 	// int_ptrace
 	// data to Hash
+	return Qnil;
 }
 static VALUE ptrace_set_siginfo( pid_t * pid, VALUE hash ) {
+	// alloc sig struct
 	// hash to data
 	// int_ptrace
+	return Qnil;
 }
 
 static VALUE ptrace_get_eventmsg( pid_t * pid ) {
+	// alloc msg struct
 	// int_ptrace
 	// data to Hash
+	return Qnil;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -130,17 +169,22 @@ static void init_debugger_class( VALUE modPtrace ) {
 	clsDebugger = rb_define_class_under(modPtrace, DEBUGGER_CLASS_NAME, 
 					    rb_cObject);
 
-	rb_define_singleton_method(clsDebugger, "", ptrace_send, 2);
-	rb_define_singleton_method(clsDebugger, "", ptrace_send_data, 2);
-	rb_define_singleton_method(clsDebugger, "", ptrace_peek, 2);
-	rb_define_singleton_method(clsDebugger, "", ptrace_poke, 2);
-	rb_define_singleton_method(clsDebugger, "", ptrace_get_regs, 2);
-	rb_define_singleton_method(clsDebugger, "", ptrace_set_regs, 2);
-	rb_define_singleton_method(clsDebugger, "", ptrace_get_fpregs, 2);
-	rb_define_singleton_method(clsDebugger, "", ptrace_set_fpregs, 2);
-	rb_define_singleton_method(clsDebugger, "", ptrace_get_siginfo, 2);
-	rb_define_singleton_method(clsDebugger, "", ptrace_set_siginfo, 2);
-	rb_define_singleton_method(clsDebugger, "", ptrace_get_eventmsg, 2);
+	rb_define_singleton_method(clsDebugger, "send", ptrace_send, 3);
+	rb_define_singleton_method(clsDebugger, "send_data", ptrace_send_data, 
+				   4);
+	rb_define_singleton_method(clsDebugger, "peek", ptrace_peek, 3);
+	rb_define_singleton_method(clsDebugger, "poke", ptrace_poke, 4);
+	rb_define_singleton_method(clsDebugger, "regs", ptrace_get_regs, 1);
+	rb_define_singleton_method(clsDebugger, "regs=", ptrace_set_regs, 2);
+	rb_define_singleton_method(clsDebugger, "fpregs", ptrace_get_fpregs, 1);
+	rb_define_singleton_method(clsDebugger, "fpregs=", ptrace_set_fpregs, 
+				   2);
+	rb_define_singleton_method(clsDebugger, "signal", ptrace_get_siginfo, 
+				   1);
+	rb_define_singleton_method(clsDebugger, "signal=", ptrace_set_siginfo, 
+				   2);
+	rb_define_singleton_method(clsDebugger, "event_msg", 
+				   ptrace_get_eventmsg, 1);
 }
 
 /* ---------------------------------------------------------------------- */
