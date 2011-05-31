@@ -25,7 +25,6 @@
 #define SZ_PTRACE_KILL "kill"
 #define SZ_PTRACE_ATTACH "attach"
 #define SZ_PTRACE_DETACH  "detach"
-// #ifdef linux
 #define SZ_PTRACE_GETSIGINFO "getsiginfo"
 #define SZ_PTRACE_SETSIGINFO "setsiginfo"
 #define SZ_PTRACE_SETOPTIONS "setoptions"
