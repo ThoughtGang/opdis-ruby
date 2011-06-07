@@ -12,6 +12,8 @@
 #include <sys/ptrace.h>
 #include <sys/user.h>
 
+// TODO: how to represent a 128-bit number in C and ruby
+
 /* yup, ptrace is not actually POSIX... */
 #ifdef __APPLE__
 #  define PTRACE_TRACE_ME PT_TRACE_ME
@@ -420,13 +422,14 @@ static VALUE ptrace_set_siginfo( pid_t * pid, VALUE hash ) {
 }
 
 static VALUE ptrace_eventmsg( pid_t * pid ) {
-	VALUE h = rb_hash_new();
+	VALUE rv = Qnil;
 #ifdef PTRACE_GETEVENTMSG
-	// alloc msg struct
-	// int_ptrace
-	// data to Hash
+	unsigned long long msg;
+
+	int_ptrace_send( PTRACE_GETEVENTMSG, pid, NULL, &msg);
+	rv = ULL2NUM(msg);
 #endif
-	return h;
+	return rv;
 }
 
 /* ---------------------------------------------------------------------- */
