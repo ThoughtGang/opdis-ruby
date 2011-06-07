@@ -34,6 +34,8 @@
 
 /* module and class names */
 #define PTRACE_MODULE_NAME "Ptrace"
+#define PTRACE_ERROR_CLASS_NAME "PtraceError"
+#define DEBUGGER_CLASS_NAME "Debugger"
 
 void Init_Ptrace_ext();
 
