@@ -129,6 +129,8 @@ calling Target.close, or by passing a block to this method.
 Free any resources used by BFD Target
 =end
     def close
+      @temp_file ||= nil
+
       if @temp_file
         path = @temp_file.path
         @temp_file.close
