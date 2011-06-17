@@ -13,6 +13,10 @@
 #include <sys/user.h>
 
 // TODO: how to represent a 128-bit number in C and ruby
+// gcc: unsigned __int128 
+//  BigDecimal.new("0.0001")
+//   require 'bigdecimal'
+
 
 /* yup, ptrace is not actually POSIX... */
 #ifdef __APPLE__
@@ -126,6 +130,34 @@ static VALUE build_cmd_hash( void ) {
 	/* ====================================================== */
 
 	return h;
+}
+
+/* This is a hash of user structure members to offsets */
+static VALUE build_user_hash( void ) {
+	VALUE h = rb_hash_new();
+
+	//u_fp_valid 
+	offset = sizeof(struct user_regs_struct);
+	//u_tsize = 
+	offset += sizeof(int) + sizeof(struct user_fpregs_struct);
+	//u_dsize = 
+	offset += sizeof(unsigned long int);
+	//u_ssize = 
+	offset += sizeof(unsigned long int);
+	//start_code = 
+	offset += sizeof(unsigned long int);
+	//start_stack = 
+	offset += sizeof(unsigned long);
+	//signal = 
+	offset += sizeof(unsigned long);
+	// magic
+	offset += sizeof(long int) + sizeof(void *) + sizeof(void *);
+	// comm
+	offset += sizeof(unsigned long int);
+	// debug_r0 - r7
+	offset += sizeof(char) * 32;
+	offset += sizeof(int);
+	CMD_HASH_ADD(h, SZ_PTRACE_TRACEME, PTRACE_TRACEME) 
 }
 
 /* ---------------------------------------------------------------------- */
@@ -454,6 +486,8 @@ static void init_debugger_class( VALUE modPtrace ) {
 	rb_define_singleton_method(clsDebug, "event_msg", ptrace_eventmsg, 1);
 }
 
+/* ---------------------------------------------------------------------- */
+/* USER */
 /* ---------------------------------------------------------------------- */
 /* BFD Module */
 
