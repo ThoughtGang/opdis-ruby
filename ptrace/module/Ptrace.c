@@ -135,6 +135,7 @@ static VALUE build_cmd_hash( void ) {
 /* This is a hash of user structure members to offsets */
 static VALUE build_user_hash( void ) {
 	VALUE h = rb_hash_new();
+	unsigned int offset;
 
 	//u_fp_valid 
 	offset = sizeof(struct user_regs_struct);
@@ -170,7 +171,7 @@ static long int_ptrace_raw( enum __ptrace_request req, VALUE pid, void * addr,
 	tgt = PIDT2NUM(pid);
 	rv = ptrace(req, tgt, addr, data);
 	if (rv == -1) {
-		 rb_raise(rb_eRuntimeError, strerror(errno));
+		 rb_raise(rb_eRuntimeError, "%s", strerror(errno));
 	}
 
 	rv;
@@ -180,12 +181,12 @@ static long int_ptrace_raw( enum __ptrace_request req, VALUE pid, void * addr,
  * return value to a Fixnum */
 static VALUE int_ptrace( enum __ptrace_request req, VALUE pid, void * addr, 
 			void * data )  {
-	long rv = int_ptrace_raw(req, tgt, addr, data);
+	long rv = int_ptrace_raw(req, pid, addr, data);
 	return LONG2NUM(rv);
 }
 
 static VALUE int_ptrace_data( VALUE req, VALUE pid, VALUE addr, void * data ) {
-	enum __ptrace_request cmd = (enum __ptrace_request_cmd) NUM2UINT(req);
+	enum __ptrace_request cmd = (enum __ptrace_request) NUM2UINT(req);
 	void * tgt_addr = (void *) NUM2ULONG(addr);
 
 	return int_ptrace(cmd, pid, tgt_addr, data);
@@ -201,7 +202,7 @@ static VALUE ptrace_send( VALUE req, VALUE pid, VALUE addr) {
 
 /* NOTE only use this for data that is NOT a memory address (pointer)! */
 static VALUE ptrace_send_data( VALUE req, VALUE pid, VALUE addr, VALUE data ) {
-	void * the_data = NUM2ULONG(data);
+	void * the_data = (void *) NUM2ULONG(data);
 
 	return int_ptrace_send(req, pid, addr, the_data);
 }
@@ -211,14 +212,14 @@ static VALUE ptrace_peek( VALUE type, VALUE pid, VALUE addr ) {
 	void * tgt_addr = (void *) NUM2ULONG(addr); 
 	long rv;
 
-	rv = int_ptrace_raw(type, pid, tgt_addr);
+	rv = int_ptrace_raw(type, pid, tgt_addr, NULL);
 
 	return ULONG2NUM(rv);
 }
 
 /* poke_text, poke_data, poke_user */
 static VALUE ptrace_poke( VALUE req, VALUE pid, VALUE addr, VALUE data ) {
-	void * the_data = NUM2ULONG(data);
+	void * the_data = (void *) NUM2ULONG(data);
 
 	return int_ptrace_send(req, pid, addr, the_data);
 }
@@ -230,7 +231,7 @@ static VALUE ptrace_get_regs( pid_t * pid ) {
 	long rv = 0;
 	struct user_regs_struct regs = {0};
 
-	rv = int_ptrace_send( PTRACE_GET_REGS, pid, NULL, &regs);
+	rv = int_ptrace_send( PTRACE_GETREGS, pid, NULL, &regs);
 
 	// int_ptrace
 #  ifdef __x86_64__
@@ -269,6 +270,8 @@ static VALUE ptrace_get_regs( pid_t * pid ) {
 }
 
 static VALUE ptrace_set_regs( pid_t * pid, VALUE hash ) {
+	VALUE h = rb_hash_new();
+
 #ifdef __linux
 	long rv = 0;
 	struct user_regs_struct regs = {0};
@@ -307,7 +310,7 @@ static VALUE ptrace_set_regs( pid_t * pid, VALUE hash ) {
 #  else
 	// hash to data
 #  endif
-	rv = int_ptrace_send( PTRACE_SET_REGS, pid, NULL, &regs);
+	rv = int_ptrace_send( PTRACE_SETREGS, pid, NULL, &regs);
 #endif
 	return Qnil;
 }
@@ -316,9 +319,10 @@ static VALUE ptrace_get_fpregs( pid_t * pid ) {
 	VALUE h = rb_hash_new();
 #ifdef __linux
 	long rv = 0;
+	int i;
 	struct user_fpregs_struct regs = {0};
 
-	rv = int_ptrace_send( PTRACE_GET_FPREGS, pid, NULL, &regs);
+	rv = int_ptrace_send( PTRACE_GETFPREGS, pid, NULL, &regs);
 #  ifdef __x86_64__
 	rb_hash_aset( h, rb_str_new_cstr("cwd"), UINT2NUM(regs.cwd) );
 	rb_hash_aset( h, rb_str_new_cstr("swd"), UINT2NUM(regs.swd) );
@@ -327,8 +331,8 @@ static VALUE ptrace_get_fpregs( pid_t * pid ) {
 	rb_hash_aset( h, rb_str_new_cstr("rip"), ULONG2NUM(regs.rip) );
 	rb_hash_aset( h, rb_str_new_cstr("rdp"), ULONG2NUM(regs.rdp) );
 	rb_hash_aset( h, rb_str_new_cstr("mxcsr"), UINT2NUM(regs.mxcsr) );
-	rb_hash_aset( h, rb_str_new_cstr("mxcsr_mask"), 
-			 UINT2NUM(regs.mxcsr_mask) );
+	rb_hash_aset( h, rb_str_new_cstr("mxcr_mask"), 
+			 UINT2NUM(regs.mxcr_mask) );
 	for ( i = 0; i < 32; i++ ) {
 		char buf[8];
 		sprintf(buf, "ST(%d)", i);
@@ -354,8 +358,11 @@ static VALUE ptrace_get_fpregs( pid_t * pid ) {
 }
 
 static VALUE ptrace_set_fpregs( pid_t * pid, VALUE hash ) {
+	VALUE h = rb_hash_new();
+
 #ifdef __linux
 	long rv = 0;
+	int i;
 	struct user_fpregs_struct regs = {0};
 #  ifdef __x86_64__
 	regs.cwd = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("cwd") ));
@@ -365,8 +372,8 @@ static VALUE ptrace_set_fpregs( pid_t * pid, VALUE hash ) {
 	regs.rip = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("rip") ));
 	regs.rdp = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("rdp") ));
 	regs.mxcsr = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("mxcsr") ));
-	regs.mxcsr_mask = NUM2ULONG(rb_hash_fetch( h, 
-					rb_str_new_cstr("mxcsr_mask") ));
+	regs.mxcr_mask = NUM2ULONG(rb_hash_fetch( h, 
+					rb_str_new_cstr("mxcr_mask") ));
 	for ( i = 0; i < 32; i++ ) {
 		char buf[8];
 		sprintf(buf, "ST(%d)", i);
@@ -383,7 +390,7 @@ static VALUE ptrace_set_fpregs( pid_t * pid, VALUE hash ) {
 	}
 #  else
 #  endif
-	rv = int_ptrace_send( PTRACE_SET_FPREGS, pid, NULL, &regs);
+	rv = int_ptrace_send( PTRACE_SETFPREGS, pid, NULL, &regs);
 #elif defined(__APPLE__)
 #  ifdef __x86_64__
 #  else
@@ -418,7 +425,6 @@ static VALUE ptrace_get_siginfo( pid_t * pid ) {
 	rb_hash_aset( h, rb_str_new_cstr("fd"), UINT2NUM(sig.si_fd) );
 #  elif defined(__APPLE__)
 #  endif
-#endif
 #endif
 	return h;
 }
