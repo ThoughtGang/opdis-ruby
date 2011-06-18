@@ -224,10 +224,18 @@ module Ptrace
 =begin rdoc
 =end
     def self.launch(cmd)
-      # TODO
-      # fork/exec
-      # return target.new
-      # send traceme
+      pid = fork
+      if pid == 0
+        Ptrace::Debugger.send( Ptrace::Debugger.commands[:traceme], 
+                               Process.pid, nil )
+        exec(cmd)
+      elsif pid == -1
+        # error
+      else
+        tgt = Target.new(pid)
+        # TODO : put a wait call somewhere
+        return tgt
+      end
     end
 
 =begin rdoc
