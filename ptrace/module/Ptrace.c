@@ -168,7 +168,7 @@ static long int_ptrace_raw( enum __ptrace_request req, VALUE pid, void * addr,
 	pid_t tgt;
 	long rv;
 
-	tgt = PIDT2NUM(pid);
+	tgt = (pid == Qnil) ? (pid_t) 0 : NUM2PIDT(pid);
 	rv = ptrace(req, tgt, addr, data);
 	if (rv == -1) {
 		 rb_raise(rb_eRuntimeError, "%s", strerror(errno));
@@ -186,7 +186,8 @@ static VALUE int_ptrace( enum __ptrace_request req, VALUE pid, void * addr,
 }
 
 static VALUE int_ptrace_data( VALUE req, VALUE pid, VALUE addr, void * data ) {
-	enum __ptrace_request cmd = (enum __ptrace_request) NUM2UINT(req);
+	enum __ptrace_request cmd = (req == Qnil) ? 0 :
+				    (enum __ptrace_request) NUM2UINT(req);
 	void * tgt_addr = (addr == Qnil) ? NULL : (void *) NUM2ULONG(addr);
 
 	return int_ptrace(cmd, pid, tgt_addr, data);
