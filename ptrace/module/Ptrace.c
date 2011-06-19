@@ -72,7 +72,7 @@ static VALUE str_to_sym( const char * str ) {
 #define CMD_HASH_ADD(h, str, val) \
 	rb_hash_aset(h, str_to_sym(str), UINT2NUM(val));
 
-static VALUE build_cmd_hash( void ) {
+static VALUE build_cmd_hash( VALUE cls ) {
 	VALUE h = rb_hash_new();
 
 	CMD_HASH_ADD(h, SZ_PTRACE_TRACEME, PTRACE_TRACEME) 
@@ -182,15 +182,13 @@ static long int_ptrace_raw( enum __ptrace_request req, VALUE pid, void * addr,
 static VALUE int_ptrace( enum __ptrace_request req, VALUE pid, void * addr, 
 			void * data )  {
 	long rv = int_ptrace_raw(req, pid, addr, data);
-printf("INT PTRACE!\n");
 	return LONG2NUM(rv);
 }
 
 static VALUE int_ptrace_data( VALUE req, VALUE pid, VALUE addr, void * data ) {
 	enum __ptrace_request cmd = (enum __ptrace_request) NUM2UINT(req);
-	void * tgt_addr = (void *) NUM2ULONG(addr);
+	void * tgt_addr = (addr == Qnil) ? NULL : (void *) NUM2ULONG(addr);
 
-printf("INT PTRACE DATA!\n");
 	return int_ptrace(cmd, pid, tgt_addr, data);
 }
 
@@ -198,20 +196,20 @@ printf("INT PTRACE DATA!\n");
 /* ---------------------------------------------------------------------- */
 /* PTRACE API */
 
-static VALUE ptrace_send( VALUE req, VALUE pid, VALUE addr) {
-printf("PTRACE SEND!\n");
+static VALUE ptrace_send( VALUE cls, VALUE req, VALUE pid, VALUE addr) {
 	return int_ptrace_data( req, pid, addr, NULL );
 }
 
 /* NOTE only use this for data that is NOT a memory address (pointer)! */
-static VALUE ptrace_send_data( VALUE req, VALUE pid, VALUE addr, VALUE data ) {
-	void * the_data = (void *) NUM2ULONG(data);
+static VALUE ptrace_send_data( VALUE cls, VALUE req, VALUE pid, VALUE addr, 
+			       VALUE data ) {
+	void * the_data = (data == Qnil) ? NULL : (void *) NUM2ULONG(data);
 
 	return int_ptrace_data(req, pid, addr, the_data);
 }
 
 /* peek_text, peek_data, peek_user */
-static VALUE ptrace_peek( VALUE type, VALUE pid, VALUE addr ) {
+static VALUE ptrace_peek( VALUE cls, VALUE type, VALUE pid, VALUE addr ) {
 	void * tgt_addr = (void *) NUM2ULONG(addr); 
 	long rv;
 
@@ -221,13 +219,14 @@ static VALUE ptrace_peek( VALUE type, VALUE pid, VALUE addr ) {
 }
 
 /* poke_text, poke_data, poke_user */
-static VALUE ptrace_poke( VALUE req, VALUE pid, VALUE addr, VALUE data ) {
+static VALUE ptrace_poke( VALUE cls, VALUE req, VALUE pid, VALUE addr, 
+			  VALUE data ) {
 	void * the_data = (void *) NUM2ULONG(data);
 
 	return int_ptrace_data(req, pid, addr, the_data);
 }
 
-static VALUE ptrace_get_regs( VALUE pid ) {
+static VALUE ptrace_get_regs( VALUE cls, VALUE pid ) {
 	VALUE h = rb_hash_new();
 
 #ifdef __linux
@@ -272,7 +271,7 @@ static VALUE ptrace_get_regs( VALUE pid ) {
 	return h;
 }
 
-static VALUE ptrace_set_regs( VALUE pid, VALUE hash ) {
+static VALUE ptrace_set_regs( VALUE cls, VALUE pid, VALUE hash ) {
 	VALUE h = rb_hash_new();
 
 #ifdef __linux
@@ -318,7 +317,7 @@ static VALUE ptrace_set_regs( VALUE pid, VALUE hash ) {
 	return Qnil;
 }
 
-static VALUE ptrace_get_fpregs( VALUE pid ) {
+static VALUE ptrace_get_fpregs( VALUE cls, VALUE pid ) {
 	VALUE h = rb_hash_new();
 #ifdef __linux
 	long rv = 0;
@@ -361,7 +360,7 @@ static VALUE ptrace_get_fpregs( VALUE pid ) {
 	return h;
 }
 
-static VALUE ptrace_set_fpregs( VALUE pid, VALUE hash ) {
+static VALUE ptrace_set_fpregs( VALUE cls, VALUE pid, VALUE hash ) {
 	VALUE h = rb_hash_new();
 
 #ifdef __linux
@@ -403,7 +402,7 @@ static VALUE ptrace_set_fpregs( VALUE pid, VALUE hash ) {
 	return Qnil;
 }
 
-static VALUE ptrace_get_siginfo( VALUE pid ) {
+static VALUE ptrace_get_siginfo( VALUE cls, VALUE pid ) {
 	VALUE h = rb_hash_new();
 #ifdef PTRACE_GETSIGINFO
 #  ifdef __linux
@@ -433,7 +432,7 @@ static VALUE ptrace_get_siginfo( VALUE pid ) {
 #endif
 	return h;
 }
-static VALUE ptrace_set_siginfo( VALUE pid, VALUE hash ) {
+static VALUE ptrace_set_siginfo( VALUE cls, VALUE pid, VALUE hash ) {
 	VALUE rv = Qnil;
 #ifdef PTRACE_SET_SIGINFO
 #  ifdef __linux
