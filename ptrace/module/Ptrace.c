@@ -204,7 +204,7 @@ static VALUE ptrace_send( VALUE req, VALUE pid, VALUE addr) {
 static VALUE ptrace_send_data( VALUE req, VALUE pid, VALUE addr, VALUE data ) {
 	void * the_data = (void *) NUM2ULONG(data);
 
-	return int_ptrace_send(req, pid, addr, the_data);
+	return int_ptrace_data(req, pid, addr, the_data);
 }
 
 /* peek_text, peek_data, peek_user */
@@ -221,17 +221,17 @@ static VALUE ptrace_peek( VALUE type, VALUE pid, VALUE addr ) {
 static VALUE ptrace_poke( VALUE req, VALUE pid, VALUE addr, VALUE data ) {
 	void * the_data = (void *) NUM2ULONG(data);
 
-	return int_ptrace_send(req, pid, addr, the_data);
+	return int_ptrace_data(req, pid, addr, the_data);
 }
 
-static VALUE ptrace_get_regs( pid_t * pid ) {
+static VALUE ptrace_get_regs( VALUE pid ) {
 	VALUE h = rb_hash_new();
 
 #ifdef __linux
 	long rv = 0;
 	struct user_regs_struct regs = {0};
 
-	rv = int_ptrace_send( PTRACE_GETREGS, pid, NULL, &regs);
+	rv = int_ptrace_raw( PTRACE_GETREGS, pid, NULL, &regs);
 
 	// int_ptrace
 #  ifdef __x86_64__
@@ -269,7 +269,7 @@ static VALUE ptrace_get_regs( pid_t * pid ) {
 	return h;
 }
 
-static VALUE ptrace_set_regs( pid_t * pid, VALUE hash ) {
+static VALUE ptrace_set_regs( VALUE pid, VALUE hash ) {
 	VALUE h = rb_hash_new();
 
 #ifdef __linux
@@ -310,19 +310,20 @@ static VALUE ptrace_set_regs( pid_t * pid, VALUE hash ) {
 #  else
 	// hash to data
 #  endif
-	rv = int_ptrace_send( PTRACE_SETREGS, pid, NULL, &regs);
+	rv = int_ptrace_raw( PTRACE_SETREGS, pid, NULL, &regs);
 #endif
 	return Qnil;
 }
 
-static VALUE ptrace_get_fpregs( pid_t * pid ) {
+static VALUE ptrace_get_fpregs( VALUE pid ) {
 	VALUE h = rb_hash_new();
 #ifdef __linux
 	long rv = 0;
 	int i;
 	struct user_fpregs_struct regs = {0};
 
-	rv = int_ptrace_send( PTRACE_GETFPREGS, pid, NULL, &regs);
+	rv = int_ptrace_raw( PTRACE_GETFPREGS, pid, NULL, &regs);
+
 #  ifdef __x86_64__
 	rb_hash_aset( h, rb_str_new_cstr("cwd"), UINT2NUM(regs.cwd) );
 	rb_hash_aset( h, rb_str_new_cstr("swd"), UINT2NUM(regs.swd) );
@@ -357,7 +358,7 @@ static VALUE ptrace_get_fpregs( pid_t * pid ) {
 	return h;
 }
 
-static VALUE ptrace_set_fpregs( pid_t * pid, VALUE hash ) {
+static VALUE ptrace_set_fpregs( VALUE pid, VALUE hash ) {
 	VALUE h = rb_hash_new();
 
 #ifdef __linux
@@ -390,7 +391,7 @@ static VALUE ptrace_set_fpregs( pid_t * pid, VALUE hash ) {
 	}
 #  else
 #  endif
-	rv = int_ptrace_send( PTRACE_SETFPREGS, pid, NULL, &regs);
+	rv = int_ptrace_raw( PTRACE_SETFPREGS, pid, NULL, &regs);
 #elif defined(__APPLE__)
 #  ifdef __x86_64__
 #  else
@@ -399,13 +400,14 @@ static VALUE ptrace_set_fpregs( pid_t * pid, VALUE hash ) {
 	return Qnil;
 }
 
-static VALUE ptrace_get_siginfo( pid_t * pid ) {
+static VALUE ptrace_get_siginfo( VALUE pid ) {
 	VALUE h = rb_hash_new();
 #ifdef PTRACE_GETSIGINFO
 #  ifdef __linux
 	siginfo_t sig = {0};
 
-	rv = int_ptrace_send( PTRACE_GETSIGINFO, pid, NULL, &sig);
+	rv = int_ptrace_raw( PTRACE_GETSIGINFO, pid, NULL, &sig);
+
 	rb_hash_aset( h, rb_str_new_cstr("signo"), UINT2NUM(sig.si_signo) );
 	rb_hash_aset( h, rb_str_new_cstr("errno"), UINT2NUM(sig.si_errno) );
 	rb_hash_aset( h, rb_str_new_cstr("code"), UINT2NUM(sig.si_code) );
@@ -428,7 +430,7 @@ static VALUE ptrace_get_siginfo( pid_t * pid ) {
 #endif
 	return h;
 }
-static VALUE ptrace_set_siginfo( pid_t * pid, VALUE hash ) {
+static VALUE ptrace_set_siginfo( VALUE pid, VALUE hash ) {
 	VALUE rv = Qnil;
 #ifdef PTRACE_SET_SIGINFO
 #  ifdef __linux
@@ -452,19 +454,19 @@ static VALUE ptrace_set_siginfo( pid_t * pid, VALUE hash ) {
 	sig.si_band = NUM2UINT(rb_hash_fetch( h, rb_str_new_cstr("band") ));
 	sig.si_fd = NUM2UINT(rb_hash_fetch( h, rb_str_new_cstr("fd") ));
 
-	int_ptrace_send( PTRACE_SETSIGINFO, pid, NULL, &sig);
+	int_ptrace_raw( PTRACE_SETSIGINFO, pid, NULL, &sig);
 #  elif defined(__APPLE__)
 #  endif
 #endif
 	return rv;
 }
 
-static VALUE ptrace_eventmsg( pid_t * pid ) {
+static VALUE ptrace_eventmsg( VALUE pid ) {
 	VALUE rv = Qnil;
 #ifdef PTRACE_GETEVENTMSG
 	unsigned long long msg;
 
-	int_ptrace_send( PTRACE_GETEVENTMSG, pid, NULL, &msg);
+	int_ptrace_raw( PTRACE_GETEVENTMSG, pid, NULL, &msg);
 	rv = ULL2NUM(msg);
 #endif
 	return rv;
