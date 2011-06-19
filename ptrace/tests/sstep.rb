@@ -8,8 +8,12 @@ if __FILE__ == $0
 
   tgt = Ptrace::Target.launch cmd
   puts "launched CMD #{tgt.pid}"
-  # TODO
-  #tgt.kill
-  tgt.detach
+  10.times do |i|
+    puts "DEBUGGER STEP #{i}"
+    tgt.step
+  end
+  puts "DEBUGGER RESUME"
+  tgt.cont
+
   Process.wait
 end
