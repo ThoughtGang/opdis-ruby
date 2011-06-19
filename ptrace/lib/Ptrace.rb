@@ -2,7 +2,7 @@
 # Copyright 2011 Thoughtgang <http://www.thoughtgang.org>
 # Ruby additions to Ptrace module
 
-require 'Ptraceext'            # Load C extension wrapping libbfd.so
+require 'Ptrace_ext'            # Load C extension wrapping libbfd.so
 
 =begin rdoc
 Note: Debugger is a class composed of singleton methods, defined in the C
@@ -138,8 +138,8 @@ module Ptrace
 =end
     def initialize(type, pid)
       @reg_type = type
-      @getter = (type == GEN) ? Debugger.regs : Debugger.fpregs
-      @setter = (type == GEN) ? Debugger.regs= : Debugger.fpregs=
+      @getter = (type == GEN) ? :regs : :fpregs
+      @setter = (type == GEN) ? :regs= : :fpregs=
       @pid = pid
     end
 
@@ -161,14 +161,14 @@ module Ptrace
 =end
     def read
       # this returns a Hash
-      @regs = @getter(@pid)
+      @regs = Debugger.send(@getter, @pid)
     end
 
 =begin rdoc
 =end
     def write
       @regs ||= read
-      @setter(@pid, @regs)
+      Debugger.send(@setter, @pid, @regs)
     end
   end
 
@@ -207,10 +207,10 @@ module Ptrace
       @text = MemArea.new(MemArea::MEM_TEXT, pid)
       @data = MemArea.new(MemArea::MEM_DATA, pid)
       @user = MemArea.new(MemArea::MEM_USER, pid)
-      @regs = RegSet.new(TargetRegs::GEN, pid)
-      @fpregs = RegSet.new(TargetRegs::FP, pid)
+      @regs = RegSet.new(RegSet::GEN, pid)
+      @fpregs = RegSet.new(RegSet::FP, pid)
       @ptrace_commands = Debugger.commands
-      @options = Options.new
+      @options = Options.new(pid)
     end
 
 =begin rdoc
@@ -218,7 +218,7 @@ module Ptrace
     def self.attach(pid)
       # TODO: verify
       tgt = Target.new(pid)
-      Ptrace::Debugger.send( Ptrace::Debugger.commands[:attach], pid, nil)
+      Ptrace::Debugger.send_cmd( Ptrace::Debugger.commands[:attach], pid, nil)
     end
 
 =begin rdoc
@@ -226,7 +226,7 @@ module Ptrace
     def self.launch(cmd)
       pid = fork
       if pid == 0
-        Ptrace::Debugger.send( Ptrace::Debugger.commands[:traceme], 
+        Ptrace::Debugger.send_cmd( Ptrace::Debugger.commands[:traceme], 
                                Process.pid, nil )
         exec(cmd)
       elsif pid == -1
@@ -308,7 +308,7 @@ module Ptrace
     protected
 
     def ptrace_send( cmd, arg=nil )
-      Debugger.send( @ptrace_commands[cmd], @pid, arg )
+      Debugger.send_cmd( @ptrace_commands[cmd], @pid, arg )
     end
 
   end
