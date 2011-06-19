@@ -182,6 +182,7 @@ static long int_ptrace_raw( enum __ptrace_request req, VALUE pid, void * addr,
 static VALUE int_ptrace( enum __ptrace_request req, VALUE pid, void * addr, 
 			void * data )  {
 	long rv = int_ptrace_raw(req, pid, addr, data);
+printf("INT PTRACE!\n");
 	return LONG2NUM(rv);
 }
 
@@ -189,6 +190,7 @@ static VALUE int_ptrace_data( VALUE req, VALUE pid, VALUE addr, void * data ) {
 	enum __ptrace_request cmd = (enum __ptrace_request) NUM2UINT(req);
 	void * tgt_addr = (void *) NUM2ULONG(addr);
 
+printf("INT PTRACE DATA!\n");
 	return int_ptrace(cmd, pid, tgt_addr, data);
 }
 
@@ -197,6 +199,7 @@ static VALUE int_ptrace_data( VALUE req, VALUE pid, VALUE addr, void * data ) {
 /* PTRACE API */
 
 static VALUE ptrace_send( VALUE req, VALUE pid, VALUE addr) {
+printf("PTRACE SEND!\n");
 	return int_ptrace_data( req, pid, addr, NULL );
 }
 
@@ -481,7 +484,7 @@ static void init_debugger_class( VALUE modPtrace ) {
 
 	rb_define_singleton_method(clsDebug, "commands", build_cmd_hash, 0);
 
-	rb_define_singleton_method(clsDebug, "send", ptrace_send, 3);
+	rb_define_singleton_method(clsDebug, "send_cmd", ptrace_send, 3);
 	rb_define_singleton_method(clsDebug, "send_data", ptrace_send_data, 4);
 	rb_define_singleton_method(clsDebug, "peek", ptrace_peek, 3);
 	rb_define_singleton_method(clsDebug, "poke", ptrace_poke, 4);
