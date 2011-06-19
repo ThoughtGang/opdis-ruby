@@ -40,3 +40,10 @@
 void Init_Ptrace_ext();
 
 #endif
+#define SZ_PTRACE_O_TRACESYSGOOD "trace_sys_good"
+#define SZ_PTRACE_O_TRACEFORK "trace_fork"
+#define SZ_PTRACE_O_TRACEVFORK "trace_vfork"
+#define SZ_PTRACE_O_TRACEVFORKDONE "trace_vfork_done"
+#define SZ_PTRACE_O_TRACECLONE "trace_clone"
+#define SZ_PTRACE_O_TRACEEXEC "trace_exec"
+#define SZ_PTRACE_O_TRACEEXIT "trace_exit"

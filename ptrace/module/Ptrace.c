@@ -158,7 +158,36 @@ static VALUE build_user_hash( void ) {
 	// debug_r0 - r7
 	offset += sizeof(char) * 32;
 	offset += sizeof(int);
-	CMD_HASH_ADD(h, SZ_PTRACE_TRACEME, PTRACE_TRACEME) 
+	//CMD_HASH_ADD(h, SZ_PTRACE_TRACEME, PTRACE_TRACEME) 
+
+	return h;
+}
+
+static VALUE build_option_hash( void ) {
+	VALUE h = rb_hash_new();
+
+#ifdef PTRACE_O_TRACESYSGOOD
+	CMD_HASH_ADD(h, SZ_PTRACE_O_TRACESYSGOOD, PTRACE_O_TRACESYSGOOD)
+#endif
+#ifdef PTRACE_O_TRACEFORK
+	CMD_HASH_ADD(h, SZ_PTRACE_O_TRACEFORK, PTRACE_O_TRACEFORK)
+#endif
+#ifdef PTRACE_O_TRACEVFORK
+	CMD_HASH_ADD(h, SZ_PTRACE_O_TRACEVFORK, PTRACE_O_TRACEVFORK)
+#endif
+#ifdef PTRACE_O_TRACEVFORKDONE
+	CMD_HASH_ADD(h, SZ_PTRACE_O_TRACEVFORKDONE, PTRACE_O_TRACEVFORKDONE)
+#endif
+#ifdef PTRACE_O_TRACECLONE
+	CMD_HASH_ADD(h, SZ_PTRACE_O_TRACECLONE, PTRACE_O_TRACECLONE)
+#endif
+#ifdef PTRACE_O_TRACEEXEC
+	CMD_HASH_ADD(h, SZ_PTRACE_O_TRACEEXEC, PTRACE_O_TRACEEXEC)
+#endif
+#ifdef PTRACE_O_TRACEEXIT
+	CMD_HASH_ADD(h, SZ_PTRACE_O_TRACEEXIT, PTRACE_O_TRACEEXIT)
+#endif
+	return h;
 }
 
 /* ---------------------------------------------------------------------- */
