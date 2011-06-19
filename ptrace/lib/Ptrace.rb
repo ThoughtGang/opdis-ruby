@@ -225,13 +225,13 @@ module Ptrace
 =end
     def self.launch(cmd)
       pid = fork
-      if pid == 0
-        Ptrace::Debugger.send_cmd( Ptrace::Debugger.commands[:traceme], 
-                               Process.pid, nil )
+      if ! pid
+        Ptrace::Debugger.send_cmd(Ptrace::Debugger.commands[:traceme], nil, nil)
         exec(cmd)
       elsif pid == -1
         # error
       else
+        sleep 1
         tgt = Target.new(pid)
         # TODO : put a wait call somewhere
         return tgt
