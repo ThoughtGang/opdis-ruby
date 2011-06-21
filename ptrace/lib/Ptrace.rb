@@ -3,12 +3,25 @@
 # Ruby additions to Ptrace module
 
 require 'Ptrace_ext'            # Load C extension wrapping libbfd.so
+require 'forwardable'
 
 =begin rdoc
 Note: Debugger is a class composed of singleton methods, defined in the C
 extension module.
 =end
 module Ptrace
+
+  # -----------------------------------------------------------------------
+  class Error < RuntimeError
+  end
+
+  # No such process
+  class InvalidProcessError < Error
+  end
+
+  # Operation not permitted
+  class OperationNotPermittedError < Error
+  end
 
   # -----------------------------------------------------------------------
 =begin rdoc
@@ -21,7 +34,19 @@ module Ptrace
 
     def write
       opts = []
-      Debugger.send_data( Debugger.commands[:set_options], @pid, nil, opts )
+
+      begin
+        Debugger.send_data( Debugger.commands[:set_options], @pid, nil, opts )
+      rescue RuntimeError => e
+        case e.message
+          when 'Operation not permitted'
+            raise OperationNotPermittedError.new(e.message)
+          when 'No such process'
+            raise InvalidProcessError.new(e.message)
+          else
+            raise
+          end
+      end
     end
   end
 
@@ -71,13 +96,32 @@ module Ptrace
 =begin rdoc
 =end
     def peek(addr)
-      Debugger.peek(@getter_sym, @pid, addr)
+      ptrace_send(@getter_sym, addr)
     end
 
 =begin rdoc
 =end
     def poke(addr, value)
-      Debugger.poke(@setter_sym, @pid, addr, value)
+      ptrace_send(@setter_sym, addr, value)
+    end
+
+    protected
+
+    def ptrace_send( sym, addr, arg=nil )
+      begin
+        args = [@pid, addr]
+        args << arg if arg
+        Debugger.send( sym, *args )
+      rescue RuntimeError => e
+        case e.message
+          when 'Operation not permitted'
+            raise OperationNotPermittedError.new(e.message)
+          when 'No such process'
+            raise InvalidProcessError.new(e.message)
+          else
+            raise
+        end
+      end
     end
   end
 
@@ -95,6 +139,7 @@ module Ptrace
 =end
     # send a signal to the child
     def send
+      # TODO: begin/rescue
       #Debugger.signal
     end
 
@@ -102,6 +147,7 @@ module Ptrace
 =end
     # read a signal from the child. returns a Signal data struct.
     def self.get(pid)
+      # TODO: begin/rescue
       # send message
       #Debugger.signal=
       # Signal.new
@@ -112,7 +158,10 @@ module Ptrace
   # -----------------------------------------------------------------------
 =begin rdoc
 =end
-  class RegSet
+  class RegSet 
+    extend Forwardable
+    extend Enumerable
+
 =begin rdoc
 =end
     GEN = 0
@@ -132,43 +181,51 @@ module Ptrace
 
 =begin rdoc
 =end
-    attr_reader :regs
-
-=begin rdoc
-=end
     def initialize(type, pid)
       @reg_type = type
       @getter = (type == GEN) ? :regs : :fpregs
       @setter = (type == GEN) ? :regs= : :fpregs=
       @pid = pid
-    end
-
-=begin rdoc
-=end
-    def [](*args)
-      @regs ||= read
-      @regs.[](*args)
-    end
-
-=begin rdoc
-=end
-    def []=(*args)
-      @regs ||= read
-      @regs.[]=(*args)
+      @regs = {}
     end
 
 =begin rdoc
 =end
     def read
       # this returns a Hash
-      @regs = Debugger.send(@getter, @pid)
+      ptrace_send(@getter)
     end
 
 =begin rdoc
 =end
     def write
-      @regs ||= read
-      Debugger.send(@setter, @pid, @regs)
+      ptrace_send(@setter, regs)
+    end
+
+    def_delegators :@regs, :[], :[]=, :clear, :each, :delete, :each_key,
+                   :each_pair, :each_value, :empty?, :fetch, :has_key?,
+                   :has_value?, :include?, :index, :indexes, :invert,
+                   :key?, :keys, :length?, :member, :reject, :replace,
+                   :shift, :size, :sort, :store, :to_a, :to_s, :update,
+                   :value?, :values
+
+    protected
+
+    def ptrace_send( sym, arg=nil )
+      begin
+        args = [@pid]
+        args << arg if arg
+        Debugger.send( sym, *args )
+      rescue RuntimeError => e
+        case e.message
+          when 'Operation not permitted'
+            raise OperationNotPermittedError.new(e.message)
+          when 'No such process'
+            raise InvalidProcessError.new(e.message)
+          else
+            raise
+        end
+      end
     end
   end
 
@@ -218,7 +275,20 @@ module Ptrace
     def self.attach(pid)
       # TODO: verify
       tgt = Target.new(pid)
-      Ptrace::Debugger.send_cmd( Ptrace::Debugger.commands[:attach], pid, nil)
+      begin
+      # TODO: begin/rescue
+        Ptrace::Debugger.send_cmd( Ptrace::Debugger.commands[:attach], pid, nil)
+      rescue RuntimeError => e
+        case e.message
+          when 'Operation not permitted'
+            raise OperationNotPermittedError.new(e.message)
+          when 'No such process'
+            raise InvalidProcessError.new(e.message)
+          else
+            raise
+        end
+      end
+      return tgt
     end
 
 =begin rdoc
@@ -226,14 +296,27 @@ module Ptrace
     def self.launch(cmd)
       pid = fork
       if ! pid
-        Ptrace::Debugger.send_cmd(Ptrace::Debugger.commands[:traceme], nil, nil)
-        exec(cmd)
+        begin
+          Ptrace::Debugger.send_cmd(Ptrace::Debugger.commands[:traceme], nil, 
+                                    nil)
+          exec(cmd)
+        rescue RuntimeError => e
+          case e.message
+            when 'Operation not permitted'
+              raise OperationNotPermittedError.new(e.message)
+            when 'No such process'
+              raise InvalidProcessError.new(e.message)
+            else
+              raise
+          end
+        end
+
       elsif pid == -1
-        # error
+        return false
       else
         sleep 1
         tgt = Target.new(pid)
-        # TODO : put a wait call somewhere
+        # TODO : put a wait call somewhere ?
         return tgt
       end
     end
@@ -308,7 +391,18 @@ module Ptrace
     protected
 
     def ptrace_send( cmd, arg=nil )
-      Debugger.send_cmd( @ptrace_commands[cmd], @pid, arg )
+      begin
+        Debugger.send_cmd( @ptrace_commands[cmd], @pid, arg )
+      rescue RuntimeError => e
+        case e.message
+          when 'Operation not permitted'
+            raise OperationNotPermittedError.new(e.message)
+          when 'No such process'
+            raise InvalidProcessError.new(e.message)
+          else
+            raise
+        end
+      end
     end
 
   end
