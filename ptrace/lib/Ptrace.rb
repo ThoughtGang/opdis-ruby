@@ -77,7 +77,7 @@ module Ptrace
 
 =begin rdoc
 =end
-    TYPES = [MEM_TEXT, MEM_DATA, MEM_USER]
+    TYPES = [MEM_USER, MEM_TEXT, MEM_DATA]
 
 =begin rdoc
 =end
@@ -120,9 +120,9 @@ module Ptrace
 
     def ptrace_send( sym, cmd, addr, arg=nil )
       begin
-        args = [@pid, addr]
+        args = [PTRACE_COMMANDS[cmd], @pid, addr]
         args << arg if arg
-        Debugger.send( sym, PTRACE_COMMANDS[cmd], *args )
+        Debugger.send( sym, *args )
       rescue RuntimeError => e
         case e.message
           when 'Operation not permitted'

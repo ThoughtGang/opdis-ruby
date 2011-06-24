@@ -213,8 +213,8 @@ static long int_ptrace_raw( enum __ptrace_request req, VALUE pid, void * addr,
 
 	tgt = num_to_pid(pid);
 	rv = ptrace(req, tgt, addr, data);
-	if (rv == -1) {
-		 rb_raise(rb_eRuntimeError, "%s", strerror(errno));
+	if ( rv == -1l ) {
+		 rb_raise(rb_eRuntimeError, "PTRACE: %s", strerror(errno));
 	}
 
 	return rv;
@@ -231,7 +231,7 @@ static VALUE int_ptrace( enum __ptrace_request req, VALUE pid, void * addr,
 static VALUE int_ptrace_data( VALUE req, VALUE pid, VALUE addr, void * data ) {
 	enum __ptrace_request cmd = (req == Qnil) ? 0 :
 				    (enum __ptrace_request) NUM2UINT(req);
-	void * tgt_addr = (addr == Qnil) ? NULL : (void *) NUM2ULONG(addr);
+	void * tgt_addr = (addr == Qnil) ? NULL : (void *) NUM2OFFT(addr);
 
 	return int_ptrace(cmd, pid, tgt_addr, data);
 }
@@ -253,15 +253,8 @@ static VALUE ptrace_send_data( VALUE cls, VALUE req, VALUE pid, VALUE addr,
 }
 
 /* peek_text, peek_data, peek_user */
-static VALUE ptrace_peek( VALUE cls, VALUE type, VALUE pid, VALUE addr ) {
-	void * tgt_addr = (void *) NUM2OFFT(addr); 
-	long rv;
-
-//printf("PEEK: VALUE %p PID: %d\n", (void *)pid, 
-//	(pid == Qnil) ? (pid_t) 0 : NUM2PIDT(pid));
-	rv = int_ptrace_raw(type, pid, tgt_addr, NULL);
-
-	return ULONG2NUM(rv);
+static VALUE ptrace_peek( VALUE cls, VALUE req, VALUE pid, VALUE addr ) {
+	return int_ptrace_data(req, pid, addr, NULL);
 }
 
 /* poke_text, poke_data, poke_user */
