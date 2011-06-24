@@ -12,16 +12,27 @@ extension module.
 module Ptrace
 
   # -----------------------------------------------------------------------
+=begin rdoc
+=end
   class Error < RuntimeError
   end
 
   # No such process
+=begin rdoc
+=end
   class InvalidProcessError < Error
   end
 
   # Operation not permitted
+=begin rdoc
+=end
   class OperationNotPermittedError < Error
   end
+
+  # -----------------------------------------------------------------------
+=begin rdoc
+=end
+  PTRACE_COMMANDS = Debugger.commands
 
   # -----------------------------------------------------------------------
 =begin rdoc
@@ -96,22 +107,22 @@ module Ptrace
 =begin rdoc
 =end
     def peek(addr)
-      ptrace_send(@getter_sym, addr)
+      ptrace_send(:peek, @getter_sym, addr)
     end
 
 =begin rdoc
 =end
     def poke(addr, value)
-      ptrace_send(@setter_sym, addr, value)
+      ptrace_send(:poke, @setter_sym, addr, value)
     end
 
     protected
 
-    def ptrace_send( sym, addr, arg=nil )
+    def ptrace_send( sym, cmd, addr, arg=nil )
       begin
         args = [@pid, addr]
         args << arg if arg
-        Debugger.send( sym, *args )
+        Debugger.send( sym, PTRACE_COMMANDS[cmd], *args )
       rescue RuntimeError => e
         case e.message
           when 'Operation not permitted'
@@ -266,7 +277,6 @@ module Ptrace
       @user = MemArea.new(MemArea::MEM_USER, pid)
       @regs = RegSet.new(RegSet::GEN, pid)
       @fpregs = RegSet.new(RegSet::FP, pid)
-      @ptrace_commands = Debugger.commands
       @options = Options.new(pid)
     end
 
@@ -276,8 +286,8 @@ module Ptrace
       # TODO: verify
       tgt = Target.new(pid)
       begin
-      # TODO: begin/rescue
         Ptrace::Debugger.send_cmd( Ptrace::Debugger.commands[:attach], pid, nil)
+        Process.waitpid(pid)
       rescue RuntimeError => e
         case e.message
           when 'Operation not permitted'
@@ -312,11 +322,11 @@ module Ptrace
         end
 
       elsif pid == -1
-        return false
+        return nil
+
       else
-        sleep 1
+        Process.waitpid(pid)
         tgt = Target.new(pid)
-        # TODO : put a wait call somewhere ?
         return tgt
       end
     end
@@ -342,12 +352,14 @@ module Ptrace
     # actions
     def kill
       ptrace_send( :kill )
+      #Process.waitpid(@pid)
     end
 
 =begin rdoc
 =end
     def detach
       ptrace_send( :detach )
+      #Process.waitpid(@pid)
     end
 
 =begin rdoc
@@ -392,7 +404,7 @@ module Ptrace
 
     def ptrace_send( cmd, arg=nil )
       begin
-        Debugger.send_cmd( @ptrace_commands[cmd], @pid, arg )
+        Debugger.send_cmd( PTRACE_COMMANDS[cmd], @pid, arg )
       rescue RuntimeError => e
         case e.message
           when 'Operation not permitted'

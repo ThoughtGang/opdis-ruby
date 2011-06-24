@@ -53,6 +53,20 @@ static VALUE str_to_sym( const char * str ) {
 	return rb_funcall(var, rb_intern("to_sym"), 0);
 }
 
+static VALUE pid_to_num( pid_t pid ) {
+	return (sizeof(pid_t) == sizeof(unsigned int)) ? UINT2NUM(pid)
+							: ULL2NUM(pid);
+}
+
+static pid_t num_to_pid( VALUE num ) {
+	if ( num == Qnil ) {
+		return 0;
+	}
+
+	return (sizeof(pid_t) == sizeof(unsigned int)) ? (pid_t) NUM2UINT(num)
+							: (pid_t) NUM2ULL(num);
+}
+
 /* ---------------------------------------------------------------------- */
 //symFileno = rb_intern("fileno");
 // rb_raise(rb_eRuntimeError, "BFD error (%d): %s", err, bfd_errmsg(err) );
@@ -197,13 +211,13 @@ static long int_ptrace_raw( enum __ptrace_request req, VALUE pid, void * addr,
 	pid_t tgt;
 	long rv;
 
-	tgt = (pid == Qnil) ? (pid_t) 0 : NUM2PIDT(pid);
+	tgt = num_to_pid(pid);
 	rv = ptrace(req, tgt, addr, data);
 	if (rv == -1) {
 		 rb_raise(rb_eRuntimeError, "%s", strerror(errno));
 	}
 
-	rv;
+	return rv;
 }
 
 /* internal wrapper for ptrace that converts PID to a pid_t, and converts
@@ -240,9 +254,11 @@ static VALUE ptrace_send_data( VALUE cls, VALUE req, VALUE pid, VALUE addr,
 
 /* peek_text, peek_data, peek_user */
 static VALUE ptrace_peek( VALUE cls, VALUE type, VALUE pid, VALUE addr ) {
-	void * tgt_addr = (void *) NUM2ULONG(addr); 
+	void * tgt_addr = (void *) NUM2OFFT(addr); 
 	long rv;
 
+//printf("PEEK: VALUE %p PID: %d\n", (void *)pid, 
+//	(pid == Qnil) ? (pid_t) 0 : NUM2PIDT(pid));
 	rv = int_ptrace_raw(type, pid, tgt_addr, NULL);
 
 	return ULONG2NUM(rv);
@@ -444,7 +460,7 @@ static VALUE ptrace_get_siginfo( VALUE cls, VALUE pid ) {
 	rb_hash_aset( h, rb_str_new_cstr("errno"), UINT2NUM(sig.si_errno) );
 	rb_hash_aset( h, rb_str_new_cstr("code"), UINT2NUM(sig.si_code) );
 	rb_hash_aset( h, rb_str_new_cstr("trapno"), UINT2NUM(sig.si_trapno) );
-	rb_hash_aset( h, rb_str_new_cstr("pid"), PIDTNUM(sig.si_pid) );
+	rb_hash_aset( h, rb_str_new_cstr("pid"), pid_to_num(sig.si_pid) );
 	rb_hash_aset( h, rb_str_new_cstr("uid"), UIDTNUM(sig.si_uid) );
 	rb_hash_aset( h, rb_str_new_cstr("status"), UINT2NUM(sig.si_status) );
 	rb_hash_aset( h, rb_str_new_cstr("utime"), UINT2NUM(sig.si_utime) );
@@ -472,7 +488,7 @@ static VALUE ptrace_set_siginfo( VALUE cls, VALUE pid, VALUE hash ) {
 	sig.si_errno = NUM2UINT(rb_hash_fetch( h, rb_str_new_cstr("errno") ));
 	sig.si_code = NUM2UINT(rb_hash_fetch( h, rb_str_new_cstr("code") ));
 	sig.si_trapno = NUM2UINT(rb_hash_fetch( h, rb_str_new_cstr("trapno") ));
-	sig.si_pid = NUM2PIDT(rb_hash_fetch( h, rb_str_new_cstr("pid") ));
+	sig.si_pid = num_to_pid(rb_hash_fetch( h, rb_str_new_cstr("pid") ));
 	sig.si_uid = NUM2UIDT(rb_hash_fetch( h, rb_str_new_cstr("uid") ));
 	sig.si_status = NUM2UINT(rb_hash_fetch( h, rb_str_new_cstr("status") ));
 	sig.si_utime = NUM2UINT(rb_hash_fetch( h, rb_str_new_cstr("utime") ));
