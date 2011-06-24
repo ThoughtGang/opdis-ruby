@@ -2,8 +2,8 @@
 
 NAME		= 	Opcodes
 
-RUBY		=	ruby$(RUBY_VERSION)
-RAKE		=	rake$(RUBY_VERSION)
+RUBY		=	ruby	#$(RUBY_VERSION)
+RAKE		=	rake	#$(RUBY_VERSION)
 
 # ----------------------------------------------------------------------
 #  TARGETS
