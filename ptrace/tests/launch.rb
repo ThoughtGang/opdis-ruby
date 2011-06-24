@@ -9,5 +9,4 @@ if __FILE__ == $0
   tgt = Ptrace::Target.launch cmd
   puts "launched CMD #{tgt.pid}"
   tgt.detach
-  Process.wait
 end

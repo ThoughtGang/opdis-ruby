@@ -352,32 +352,35 @@ module Ptrace
     # actions
     def kill
       ptrace_send( :kill )
-      #Process.waitpid(@pid)
+      Process.waitpid(@pid)
     end
 
 =begin rdoc
 =end
     def detach
       ptrace_send( :detach )
-      #Process.waitpid(@pid)
+      Process.waitpid(@pid)
     end
 
 =begin rdoc
 =end
     def step
       ptrace_send( :singlestep )
+      Process.waitpid(@pid)
     end
 
 =begin rdoc
 =end
     def syscall
       ptrace_send( :syscall )
+      Process.waitpid(@pid)
     end
 
 =begin rdoc
 =end
     def cont
       ptrace_send( :cont )
+      Process.waitpid(@pid)
     end
 
 =begin rdoc

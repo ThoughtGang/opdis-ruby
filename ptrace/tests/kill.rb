@@ -10,6 +10,5 @@ if __FILE__ == $0
   puts "launched CMD #{tgt.pid}"
   puts "Killing..."
   tgt.kill
-  Process.wait
   puts "Done."
 end
