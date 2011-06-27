@@ -30,22 +30,21 @@ def print_state(tgt, dis)
       addstr "\n"
     end
   end
+  addstr "\n"
 
   # current insn
   ip = (regs.include? 'rip') ? regs['rip'] : regs['eip']
-  addstr("READING EIP %016X\n" % ip)
-  addstr(unpack_bytes(ip).inspect)
-  #v1 = tgt.text.peek(ip)
-  #v2 = tgt.text.peek(ip + 4)
-  #v3 = tgt.text.peek(ip + 8)
-  #v4 = tgt.text.peek(ip + 12)
-  #bytes = unpack_bytes(v1)
-  #bytes.concat = unpack_bytes(v2)
-  #bytes.concat = unpack_bytes(v3)
-  #bytes.concat = unpack_bytes(v4)
-
-  #insns = dis.disasm(bytes.pack('C*'))
-  #addstr "%016X %s" % insns.first[:insn]
+  v1 = tgt.text.peek(ip)
+  v2 = tgt.text.peek(ip + 4)
+  v3 = tgt.text.peek(ip + 8)
+  v4 = tgt.text.peek(ip + 12)
+  bytes = unpack_bytes(v1)
+  bytes.concat unpack_bytes(v2)
+  bytes.concat unpack_bytes(v3)
+  bytes.concat unpack_bytes(v4)
+  insns = dis.disasm(bytes.pack('C*'))
+  addstr "\n%016X\t%s\n" % [ip, insns.first[:insn].join]
+  
   addstr "\nPress space to step, c to continue\n"
 end
 
@@ -87,11 +86,13 @@ def main(opts)
 
   disasm = Opcodes::Disassembler.new(:arch => 'x86_64')
 
-  print_state(tgt, disasm)
-	while (not ['c', 'q'].include?(getch))
+#	while not (['c', 'q'].include?(getch))
+  cmd = 0
+  begin
     print_state(tgt, disasm)
     tgt.step
-	end
+    cmd = getch
+	end until (cmd == 99)
 
   tgt.cont
 end
