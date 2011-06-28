@@ -317,12 +317,12 @@ static VALUE ptrace_get_regs( VALUE cls, VALUE pid ) {
 	return h;
 }
 
-static VALUE ptrace_set_regs( VALUE cls, VALUE pid, VALUE hash ) {
-	VALUE h = rb_hash_new();
+static VALUE ptrace_set_regs( VALUE cls, VALUE pid, VALUE h ) {
 
 #ifdef __linux
 	long rv = 0;
 	struct user_regs_struct regs = {0};
+	int_ptrace_raw( PTRACE_GETREGS, pid, NULL, &regs);
 
 #  ifdef __x86_64__
 	regs.r15 = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("r15") ));
@@ -340,23 +340,22 @@ static VALUE ptrace_set_regs( VALUE cls, VALUE pid, VALUE hash ) {
 	regs.rdx = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("rdx") ));
 	regs.rsi = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("rsi") ));
 	regs.rdi = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("rdi") ));
-	regs.orig_rax = NUM2ULONG(hash_get_int( h, 
-						rb_str_new_cstr("orig_rax") ));
-	regs.rip = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("rip") ));
+	/* Ptrace does not allow modification of these registers:
+	regs.orig_rax = NUM2ULONG(hash_get_int(h, rb_str_new_cstr("orig_rax")));
 	regs.cs = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("cs") ));
+	regs.ss = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("ss") ));
+	regs.fs_base = NUM2ULONG(hash_get_int(h, rb_str_new_cstr("fs_base") ));
+	regs.gs_base = NUM2ULONG(hash_get_int(h, rb_str_new_cstr("gs_base") ));
+	*/
+	regs.rip = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("rip") ));
 	regs.eflags = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("eflags") ));
 	regs.rsp = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("rsp") ));
-	regs.ss = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("ss") ));
-	regs.fs_base = NUM2ULONG(hash_get_int( h, 
-						rb_str_new_cstr("fs_base") ));
-	regs.gs_base = NUM2ULONG(hash_get_int( h, 
-						rb_str_new_cstr("gs_base") ));
 	regs.ds = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("ds") ));
 	regs.es = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("es") ));
 	regs.fs = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("fs") ));
 	regs.gs = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("gs") ));
 #  else
-	// hash to data
+	// x86 hash to data
 #  endif
 	rv = int_ptrace_raw( PTRACE_SETREGS, pid, NULL, &regs);
 #endif
@@ -406,8 +405,7 @@ static VALUE ptrace_get_fpregs( VALUE cls, VALUE pid ) {
 	return h;
 }
 
-static VALUE ptrace_set_fpregs( VALUE cls, VALUE pid, VALUE hash ) {
-	VALUE h = rb_hash_new();
+static VALUE ptrace_set_fpregs( VALUE cls, VALUE pid, VALUE h ) {
 
 #ifdef __linux
 	long rv = 0;
