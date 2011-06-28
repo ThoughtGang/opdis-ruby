@@ -210,7 +210,7 @@ module Ptrace
 =begin rdoc
 =end
     def write
-      ptrace_send(@setter, regs)
+      ptrace_send(@setter, @regs)
     end
 
     def_delegators :@regs, :[], :[]=, :clear, :each, :delete, :each_key,
