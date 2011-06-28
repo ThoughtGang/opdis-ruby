@@ -67,6 +67,13 @@ static pid_t num_to_pid( VALUE num ) {
 							: (pid_t) NUM2ULL(num);
 }
 
+/* return value for key or 0 */
+static VALUE hash_get_int( VALUE h, VALUE key ) {
+
+	VALUE v = rb_hash_aref( h, key );
+	return (v == Qnil) ? UINT2NUM(0) : v;
+}
+
 /* ---------------------------------------------------------------------- */
 //symFileno = rb_intern("fileno");
 // rb_raise(rb_eRuntimeError, "BFD error (%d): %s", err, bfd_errmsg(err) );
@@ -318,36 +325,36 @@ static VALUE ptrace_set_regs( VALUE cls, VALUE pid, VALUE hash ) {
 	struct user_regs_struct regs = {0};
 
 #  ifdef __x86_64__
-	regs.r15 = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("r15") ));
-	regs.r14 = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("r14") ));
-	regs.r13 = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("r13") ));
-	regs.r12 = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("r12") ));
-	regs.rbp = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("rbp") ));
-	regs.rbx = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("rbx") ));
-	regs.r11 = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("r11") ));
-	regs.r10 = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("r10") ));
-	regs.r9 = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("r9") ));
-	regs.r8 = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("r8") ));
-	regs.rax = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("rax") ));
-	regs.rcx = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("rcx") ));
-	regs.rdx = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("rdx") ));
-	regs.rsi = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("rsi") ));
-	regs.rdi = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("rdi") ));
-	regs.orig_rax = NUM2ULONG(rb_hash_fetch( h, 
+	regs.r15 = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("r15") ));
+	regs.r14 = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("r14") ));
+	regs.r13 = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("r13") ));
+	regs.r12 = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("r12") ));
+	regs.rbp = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("rbp") ));
+	regs.rbx = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("rbx") ));
+	regs.r11 = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("r11") ));
+	regs.r10 = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("r10") ));
+	regs.r9 = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("r9") ));
+	regs.r8 = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("r8") ));
+	regs.rax = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("rax") ));
+	regs.rcx = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("rcx") ));
+	regs.rdx = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("rdx") ));
+	regs.rsi = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("rsi") ));
+	regs.rdi = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("rdi") ));
+	regs.orig_rax = NUM2ULONG(hash_get_int( h, 
 						rb_str_new_cstr("orig_rax") ));
-	regs.rip = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("rip") ));
-	regs.cs = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("cs") ));
-	regs.eflags = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("eflags") ));
-	regs.rsp = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("rsp") ));
-	regs.ss = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("ss") ));
-	regs.fs_base = NUM2ULONG(rb_hash_fetch( h, 
+	regs.rip = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("rip") ));
+	regs.cs = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("cs") ));
+	regs.eflags = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("eflags") ));
+	regs.rsp = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("rsp") ));
+	regs.ss = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("ss") ));
+	regs.fs_base = NUM2ULONG(hash_get_int( h, 
 						rb_str_new_cstr("fs_base") ));
-	regs.gs_base = NUM2ULONG(rb_hash_fetch( h, 
+	regs.gs_base = NUM2ULONG(hash_get_int( h, 
 						rb_str_new_cstr("gs_base") ));
-	regs.ds = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("ds") ));
-	regs.es = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("es") ));
-	regs.fs = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("fs") ));
-	regs.gs = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("gs") ));
+	regs.ds = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("ds") ));
+	regs.es = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("es") ));
+	regs.fs = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("fs") ));
+	regs.gs = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("gs") ));
 #  else
 	// hash to data
 #  endif
@@ -407,27 +414,27 @@ static VALUE ptrace_set_fpregs( VALUE cls, VALUE pid, VALUE hash ) {
 	int i;
 	struct user_fpregs_struct regs = {0};
 #  ifdef __x86_64__
-	regs.cwd = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("cwd") ));
-	regs.swd = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("swd") ));
-	regs.ftw = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("ftw") ));
-	regs.fop = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("fop") ));
-	regs.rip = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("rip") ));
-	regs.rdp = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("rdp") ));
-	regs.mxcsr = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("mxcsr") ));
-	regs.mxcr_mask = NUM2ULONG(rb_hash_fetch( h, 
+	regs.cwd = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("cwd") ));
+	regs.swd = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("swd") ));
+	regs.ftw = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("ftw") ));
+	regs.fop = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("fop") ));
+	regs.rip = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("rip") ));
+	regs.rdp = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("rdp") ));
+	regs.mxcsr = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("mxcsr") ));
+	regs.mxcr_mask = NUM2ULONG(hash_get_int( h, 
 					rb_str_new_cstr("mxcr_mask") ));
 	for ( i = 0; i < 32; i++ ) {
 		char buf[8];
 		sprintf(buf, "ST(%d)", i);
 		// TODO: 8 * 16-byte regs
-		//regs.st_space[i] = NUM2UINT(rb_hash_fetch( h, 
+		//regs.st_space[i] = NUM2UINT(hash_get_int( h, 
 		//				rb_str_new_cstr(buf) ));
 	}
 	for ( i = 0; i < 64; i++ ) {
 		char buf[8];
 		sprintf(buf, "xmm%d", i);
 		// TODO : 16 x 16-byte regs
-		//regs.xmm_space[i] = NUM2UINT(rb_hash_fetch( h, 
+		//regs.xmm_space[i] = NUM2UINT(hash_get_int( h, 
 		//				rb_str_new_cstr(buf) ));
 	}
 #  else
@@ -477,23 +484,23 @@ static VALUE ptrace_set_siginfo( VALUE cls, VALUE pid, VALUE hash ) {
 #  ifdef __linux
 	siginfo_t sig = {0};
 
-	sig.si_signo = NUM2UINT(rb_hash_fetch( h, rb_str_new_cstr("signo") ));
-	sig.si_errno = NUM2UINT(rb_hash_fetch( h, rb_str_new_cstr("errno") ));
-	sig.si_code = NUM2UINT(rb_hash_fetch( h, rb_str_new_cstr("code") ));
-	sig.si_trapno = NUM2UINT(rb_hash_fetch( h, rb_str_new_cstr("trapno") ));
-	sig.si_pid = num_to_pid(rb_hash_fetch( h, rb_str_new_cstr("pid") ));
-	sig.si_uid = NUM2UIDT(rb_hash_fetch( h, rb_str_new_cstr("uid") ));
-	sig.si_status = NUM2UINT(rb_hash_fetch( h, rb_str_new_cstr("status") ));
-	sig.si_utime = NUM2UINT(rb_hash_fetch( h, rb_str_new_cstr("utime") ));
-	sig.si_stime = NUM2UINT(rb_hash_fetch( h, rb_str_new_cstr("stime") ));
-	sig.si_value = NUM2UINT(rb_hash_fetch( h, rb_str_new_cstr("value") ));
-	sig.si_int = NUM2UINT(rb_hash_fetch( h, rb_str_new_cstr("int") ));
-	sig.si_ptr = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("ptr") ));
-	sig.si_overrun = NUM2UINT(rb_hash_fetch(h, rb_str_new_cstr("overrun")));
-	sig.si_timerid = NUM2UINT(rb_hash_fetch(h, rb_str_new_cstr("timerid")));
-	sig.si_addr = NUM2ULONG(rb_hash_fetch( h, rb_str_new_cstr("addr") ));
-	sig.si_band = NUM2UINT(rb_hash_fetch( h, rb_str_new_cstr("band") ));
-	sig.si_fd = NUM2UINT(rb_hash_fetch( h, rb_str_new_cstr("fd") ));
+	sig.si_signo = NUM2UINT(hash_get_int( h, rb_str_new_cstr("signo") ));
+	sig.si_errno = NUM2UINT(hash_get_int( h, rb_str_new_cstr("errno") ));
+	sig.si_code = NUM2UINT(hash_get_int( h, rb_str_new_cstr("code") ));
+	sig.si_trapno = NUM2UINT(hash_get_int( h, rb_str_new_cstr("trapno") ));
+	sig.si_pid = num_to_pid(hash_get_int( h, rb_str_new_cstr("pid") ));
+	sig.si_uid = NUM2UIDT(hash_get_int( h, rb_str_new_cstr("uid") ));
+	sig.si_status = NUM2UINT(hash_get_int( h, rb_str_new_cstr("status") ));
+	sig.si_utime = NUM2UINT(hash_get_int( h, rb_str_new_cstr("utime") ));
+	sig.si_stime = NUM2UINT(hash_get_int( h, rb_str_new_cstr("stime") ));
+	sig.si_value = NUM2UINT(hash_get_int( h, rb_str_new_cstr("value") ));
+	sig.si_int = NUM2UINT(hash_get_int( h, rb_str_new_cstr("int") ));
+	sig.si_ptr = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("ptr") ));
+	sig.si_overrun = NUM2UINT(hash_get_int(h, rb_str_new_cstr("overrun")));
+	sig.si_timerid = NUM2UINT(hash_get_int(h, rb_str_new_cstr("timerid")));
+	sig.si_addr = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("addr") ));
+	sig.si_band = NUM2UINT(hash_get_int( h, rb_str_new_cstr("band") ));
+	sig.si_fd = NUM2UINT(hash_get_int( h, rb_str_new_cstr("fd") ));
 
 	int_ptrace_raw( PTRACE_SETSIGINFO, pid, NULL, &sig);
 #  elif defined(__APPLE__)
