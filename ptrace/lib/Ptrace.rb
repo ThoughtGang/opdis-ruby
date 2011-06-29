@@ -17,16 +17,21 @@ module Ptrace
   class Error < RuntimeError
   end
 
-  # No such process
 =begin rdoc
+"No such process" returned in errno.
 =end
   class InvalidProcessError < Error
   end
 
-  # Operation not permitted
 =begin rdoc
+"Operation not permitted" returned in errno.
 =end
   class OperationNotPermittedError < Error
+  end
+
+=begin rdoc
+=end
+  class OperationNotSupportedError < Error
   end
 
   # -----------------------------------------------------------------------
@@ -50,9 +55,9 @@ module Ptrace
         Debugger.send_data( Debugger.commands[:set_options], @pid, nil, opts )
       rescue RuntimeError => e
         case e.message
-          when 'Operation not permitted'
+          when 'PTRACE: Operation not permitted'
             raise OperationNotPermittedError.new(e.message)
-          when 'No such process'
+          when 'PTRACE: No such process'
             raise InvalidProcessError.new(e.message)
           else
             raise
@@ -120,14 +125,15 @@ module Ptrace
 
     def ptrace_send( sym, cmd, addr, arg=nil )
       begin
+        raise OperationNotSupportedError if (not PTRACE_COMMANDS.include? cmd)
         args = [PTRACE_COMMANDS[cmd], @pid, addr]
         args << arg if arg
         Debugger.send( sym, *args )
       rescue RuntimeError => e
         case e.message
-          when 'Operation not permitted'
+          when 'PTRACE: Operation not permitted'
             raise OperationNotPermittedError.new(e.message)
-          when 'No such process'
+          when 'PTRACE: No such process'
             raise InvalidProcessError.new(e.message)
           else
             raise
@@ -204,7 +210,7 @@ module Ptrace
 =end
     def read
       # this returns a Hash
-      ptrace_send(@getter)
+      @regs = ptrace_send(@getter)
     end
 
 =begin rdoc
@@ -229,9 +235,9 @@ module Ptrace
         Debugger.send( sym, *args )
       rescue RuntimeError => e
         case e.message
-          when 'Operation not permitted'
+          when 'PTRACE: Operation not permitted'
             raise OperationNotPermittedError.new(e.message)
-          when 'No such process'
+          when 'PTRACE: No such process'
             raise InvalidProcessError.new(e.message)
           else
             raise
@@ -290,9 +296,9 @@ module Ptrace
         Process.waitpid(pid)
       rescue RuntimeError => e
         case e.message
-          when 'Operation not permitted'
+          when 'PTRACE: Operation not permitted'
             raise OperationNotPermittedError.new(e.message)
-          when 'No such process'
+          when 'PTRACE: No such process'
             raise InvalidProcessError.new(e.message)
           else
             raise
@@ -312,9 +318,9 @@ module Ptrace
           exec(cmd)
         rescue RuntimeError => e
           case e.message
-            when 'Operation not permitted'
+            when 'PTRACE: Operation not permitted'
               raise OperationNotPermittedError.new(e.message)
-            when 'No such process'
+            when 'PTRACE: No such process'
               raise InvalidProcessError.new(e.message)
             else
               raise
@@ -377,6 +383,27 @@ module Ptrace
     end
 
 =begin rdoc
+Wrapper for recording syscalls. This issues a PT_SYSCALL to stop the target at
+the next syscall, records the 'in' register set, issues a PT_SYSCALL to stop the
+target after the syscall returns, records the 'out' register set, and 
+returns a Hash  { :in, :out } of the register sets. The target is stopped
+on return from this syscall.
+=end
+    def syscall_state
+      begin
+        state = {}
+        syscall
+        state[:in] = @regs.read
+        syscall
+        state[:out] = @regs.read
+        state
+      rescue InvalidProcessError
+        # Program exited without a syscall
+        return state
+      end
+    end
+
+=begin rdoc
 =end
     def cont
       ptrace_send( :cont )
@@ -407,12 +434,13 @@ module Ptrace
 
     def ptrace_send( cmd, arg=nil )
       begin
+        raise OperationNotSupportedError if (not PTRACE_COMMANDS.include? cmd)
         Debugger.send_cmd( PTRACE_COMMANDS[cmd], @pid, arg )
       rescue RuntimeError => e
         case e.message
-          when 'Operation not permitted'
+          when 'PTRACE: Operation not permitted'
             raise OperationNotPermittedError.new(e.message)
-          when 'No such process'
+          when 'PTRACE: No such process'
             raise InvalidProcessError.new(e.message)
           else
             raise
