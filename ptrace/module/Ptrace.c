@@ -6,6 +6,7 @@
  */
 
 #include <string.h>
+#include <signal.h>
 #include <errno.h>
 
 #include <sys/types.h>
@@ -16,23 +17,6 @@
 // gcc: unsigned __int128 
 //  BigDecimal.new("0.0001")
 //   require 'bigdecimal'
-
-
-/* yup, ptrace is not actually POSIX... */
-#ifdef __APPLE__
-#  define PTRACE_TRACE_ME PT_TRACE_ME
-#  define PTRACE_PEEK_TEXT PT_READ_I
-#  define PTRACE_PEEK_DATA PT_READ_D
-#  define PTRACE_PEEK_USER PT_READ_U
-#  define PTRACE_POKE_TEXT PT_WRITE_I
-#  define PTRACE_POKE_DATA PT_WRITE_D
-#  define PTRACE_POKE_USER PT_WRITE_U
-#  define PTRACE_CONT PT_CONTINUE
-#  define PTRACE_SINGLESTEP PT_STEP
-#  define PTRACE_KILL PT_KILL
-#  define PTRACE_ATTACH PT_ATTACH
-#  define PTRACE_DETACH PT_DETACH
-#endif
 
 #include <ruby.h>
 #include "ruby_compat.h"
@@ -96,57 +80,57 @@ static VALUE hash_get_int( VALUE h, VALUE key ) {
 static VALUE build_cmd_hash( VALUE cls ) {
 	VALUE h = rb_hash_new();
 
-	CMD_HASH_ADD(h, SZ_PTRACE_TRACEME, PTRACE_TRACEME) 
-	CMD_HASH_ADD(h, SZ_PTRACE_PEEKTEXT, PTRACE_PEEKTEXT)
-	CMD_HASH_ADD(h, SZ_PTRACE_PEEKDATA, PTRACE_PEEKDATA) 
-	CMD_HASH_ADD(h, SZ_PTRACE_POKETEXT, PTRACE_POKETEXT)
-	CMD_HASH_ADD(h, SZ_PTRACE_POKEDATA, PTRACE_POKEDATA)
-	CMD_HASH_ADD(h, SZ_PTRACE_CONT, PTRACE_CONT)
-	CMD_HASH_ADD(h, SZ_PTRACE_SINGLESTEP, PTRACE_SINGLESTEP)
-	CMD_HASH_ADD(h, SZ_PTRACE_KILL, PTRACE_KILL)
-	CMD_HASH_ADD(h, SZ_PTRACE_ATTACH, PTRACE_ATTACH)
-	CMD_HASH_ADD(h, SZ_PTRACE_DETACH, PTRACE_DETACH)
+	CMD_HASH_ADD(h, SZ_PTRACE_TRACEME, PT_TRACE_ME) 
+	CMD_HASH_ADD(h, SZ_PTRACE_PEEKTEXT, PT_READ_I)
+	CMD_HASH_ADD(h, SZ_PTRACE_PEEKDATA, PT_READ_D) 
+	CMD_HASH_ADD(h, SZ_PTRACE_POKETEXT, PT_WRITE_I)
+	CMD_HASH_ADD(h, SZ_PTRACE_POKEDATA, PT_WRITE_D)
+	CMD_HASH_ADD(h, SZ_PTRACE_CONT, PT_CONTINUE)
+	CMD_HASH_ADD(h, SZ_PTRACE_SINGLESTEP, PT_STEP)
+	CMD_HASH_ADD(h, SZ_PTRACE_KILL, PT_KILL)
+	CMD_HASH_ADD(h, SZ_PTRACE_ATTACH, PT_ATTACH)
+	CMD_HASH_ADD(h, SZ_PTRACE_DETACH, PT_DETACH)
 
 	/* ====================================================== */
 	/* These may not be present in all ptrace implementations */
-#ifdef PTRACE_POKEUSR
-	CMD_HASH_ADD(h, SZ_PTRACE_POKEUSR, PTRACE_POKEUSR)
+#ifdef PT_WRITE_U
+	CMD_HASH_ADD(h, SZ_PTRACE_POKEUSR, PT_WRITE_U)
 #endif
-#ifdef PTRACE_PEEKUSR
-	CMD_HASH_ADD(h, SZ_PTRACE_PEEKUSR, PTRACE_PEEKUSR)
+#ifdef PT_READ_U
+	CMD_HASH_ADD(h, SZ_PTRACE_PEEKUSR, PT_READ_U)
 #endif
-#ifdef PTRACE_SYSCALL
-	CMD_HASH_ADD(h, SZ_PTRACE_SYSCALL, PTRACE_SYSCALL)
+#ifdef PT_SYSCALL
+	CMD_HASH_ADD(h, SZ_PTRACE_SYSCALL, PT_SYSCALL)
 #endif
-#ifdef PTRACE_GETREGS
-	CMD_HASH_ADD(h, SZ_PTRACE_GETREGS, PTRACE_GETREGS)
+#ifdef PT_GETREGS
+	CMD_HASH_ADD(h, SZ_PTRACE_GETREGS, PT_GETREGS)
 #endif
-#ifdef PTRACE_GETFPREGS
-	CMD_HASH_ADD(h, SZ_PTRACE_GETFPREGS, PTRACE_GETFPREGS)
+#ifdef PT_GETFPREGS
+	CMD_HASH_ADD(h, SZ_PTRACE_GETFPREGS, PT_GETFPREGS)
 #endif
-#ifdef PTRACE_SETREGS
-	CMD_HASH_ADD(h, SZ_PTRACE_SETREGS, PTRACE_SETREGS)
+#ifdef PT_SETREGS
+	CMD_HASH_ADD(h, SZ_PTRACE_SETREGS, PT_SETREGS)
 #endif
-#ifdef PTRACE_SETFPREGS
-	CMD_HASH_ADD(h, SZ_PTRACE_SETFPREGS, PTRACE_SETFPREGS)
+#ifdef PT_SETFPREGS
+	CMD_HASH_ADD(h, SZ_PTRACE_SETFPREGS, PT_SETFPREGS)
 #endif
-#ifdef PTRACE_SETOPTIONS
-	CMD_HASH_ADD(h, SZ_PTRACE_SETOPTIONS, PTRACE_SETOPTIONS)
+#ifdef PT_SETOPTIONS
+	CMD_HASH_ADD(h, SZ_PTRACE_SETOPTIONS, PT_SETOPTIONS)
 #endif
-#ifdef PTRACE_GETSIGINFO
-	CMD_HASH_ADD(h, SZ_PTRACE_GETSIGINFO, PTRACE_GETSIGINFO)
+#ifdef PT_GETSIGINFO
+	CMD_HASH_ADD(h, SZ_PTRACE_GETSIGINFO, PT_GETSIGINFO)
 #endif
-#ifdef PTRACE_SETSIGINFO
-	CMD_HASH_ADD(h, SZ_PTRACE_SETSIGINFO, PTRACE_SETSIGINFO)
+#ifdef PT_SETSIGINFO
+	CMD_HASH_ADD(h, SZ_PTRACE_SETSIGINFO, PT_SETSIGINFO)
 #endif
-#ifdef PTRACE_GETEVENTMSG
-	CMD_HASH_ADD(h, SZ_PTRACE_GETEVENTMSG, PTRACE_GETEVENTMSG)
+#ifdef PT_GETEVENTMSG
+	CMD_HASH_ADD(h, SZ_PTRACE_GETEVENTMSG, PT_GETEVENTMSG)
 #endif
-#ifdef PTRACE_SYSEMU
-	CMD_HASH_ADD(h, SZ_PTRACE_SYSEMU, PTRACE_SYSEMU)
+#ifdef PT_SYSEMU
+	CMD_HASH_ADD(h, SZ_PTRACE_SYSEMU, PT_SYSEMU)
 #endif
-#ifdef PTRACE_SYSEMU_SINGLESTEP
-	CMD_HASH_ADD(h, SZ_PTRACE_SYSEMU_SINGLESTEP, PTRACE_SYSEMU_SINGLESTEP)
+#ifdef PT_SYSEMU_SINGLESTEP
+	CMD_HASH_ADD(h, SZ_PTRACE_SYSEMU_SINGLESTEP, PT_SYSEMU_SINGLESTEP)
 #endif
 	/* ====================================================== */
 
@@ -179,7 +163,7 @@ static VALUE build_user_hash( void ) {
 	// debug_r0 - r7
 	offset += sizeof(char) * 32;
 	offset += sizeof(int);
-	//CMD_HASH_ADD(h, SZ_PTRACE_TRACEME, PTRACE_TRACEME) 
+	//CMD_HASH_ADD(h, SZ_PTRACE_TRACEME, PT_TRACE_ME) 
 
 	return h;
 }
@@ -187,6 +171,7 @@ static VALUE build_user_hash( void ) {
 static VALUE build_option_hash( void ) {
 	VALUE h = rb_hash_new();
 
+	// TODO : Change this to if linux as these are not #defines!
 #ifdef PTRACE_O_TRACESYSGOOD
 	CMD_HASH_ADD(h, SZ_PTRACE_O_TRACESYSGOOD, PTRACE_O_TRACESYSGOOD)
 #endif
@@ -279,7 +264,7 @@ static VALUE ptrace_get_regs( VALUE cls, VALUE pid ) {
 	long rv = 0;
 	struct user_regs_struct regs = {0};
 
-	rv = int_ptrace_raw( PTRACE_GETREGS, pid, NULL, &regs);
+	rv = int_ptrace_raw( PT_GETREGS, pid, NULL, &regs);
 
 	// int_ptrace
 #  ifdef __x86_64__
@@ -322,7 +307,7 @@ static VALUE ptrace_set_regs( VALUE cls, VALUE pid, VALUE h ) {
 #ifdef __linux
 	long rv = 0;
 	struct user_regs_struct regs = {0};
-	int_ptrace_raw( PTRACE_GETREGS, pid, NULL, &regs);
+	int_ptrace_raw( PT_GETREGS, pid, NULL, &regs);
 
 #  ifdef __x86_64__
 	regs.r15 = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("r15") ));
@@ -357,7 +342,7 @@ static VALUE ptrace_set_regs( VALUE cls, VALUE pid, VALUE h ) {
 #  else
 	// x86 hash to data
 #  endif
-	rv = int_ptrace_raw( PTRACE_SETREGS, pid, NULL, &regs);
+	rv = int_ptrace_raw( PT_SETREGS, pid, NULL, &regs);
 #endif
 	return Qnil;
 }
@@ -369,7 +354,7 @@ static VALUE ptrace_get_fpregs( VALUE cls, VALUE pid ) {
 	int i;
 	struct user_fpregs_struct regs = {0};
 
-	rv = int_ptrace_raw( PTRACE_GETFPREGS, pid, NULL, &regs);
+	rv = int_ptrace_raw( PT_GETFPREGS, pid, NULL, &regs);
 
 #  ifdef __x86_64__
 	rb_hash_aset( h, rb_str_new_cstr("cwd"), UINT2NUM(regs.cwd) );
@@ -437,7 +422,7 @@ static VALUE ptrace_set_fpregs( VALUE cls, VALUE pid, VALUE h ) {
 	}
 #  else
 #  endif
-	rv = int_ptrace_raw( PTRACE_SETFPREGS, pid, NULL, &regs);
+	rv = int_ptrace_raw( PT_SETFPREGS, pid, NULL, &regs);
 #elif defined(__APPLE__)
 #  ifdef __x86_64__
 #  else
@@ -448,27 +433,27 @@ static VALUE ptrace_set_fpregs( VALUE cls, VALUE pid, VALUE h ) {
 
 static VALUE ptrace_get_siginfo( VALUE cls, VALUE pid ) {
 	VALUE h = rb_hash_new();
-#ifdef PTRACE_GETSIGINFO
+#ifdef PT_GETSIGINFO
 #  ifdef __linux
 	siginfo_t sig = {0};
 
-	rv = int_ptrace_raw( PTRACE_GETSIGINFO, pid, NULL, &sig);
+	int rv = int_ptrace_raw( PT_GETSIGINFO, pid, NULL, &sig);
 
 	rb_hash_aset( h, rb_str_new_cstr("signo"), UINT2NUM(sig.si_signo) );
 	rb_hash_aset( h, rb_str_new_cstr("errno"), UINT2NUM(sig.si_errno) );
 	rb_hash_aset( h, rb_str_new_cstr("code"), UINT2NUM(sig.si_code) );
-	rb_hash_aset( h, rb_str_new_cstr("trapno"), UINT2NUM(sig.si_trapno) );
+	//rb_hash_aset( h, rb_str_new_cstr("trapno"), UINT2NUM(sig.si_trapno) );
 	rb_hash_aset( h, rb_str_new_cstr("pid"), pid_to_num(sig.si_pid) );
 	rb_hash_aset( h, rb_str_new_cstr("uid"), UIDTNUM(sig.si_uid) );
 	rb_hash_aset( h, rb_str_new_cstr("status"), UINT2NUM(sig.si_status) );
 	rb_hash_aset( h, rb_str_new_cstr("utime"), UINT2NUM(sig.si_utime) );
 	rb_hash_aset( h, rb_str_new_cstr("stime"), UINT2NUM(sig.si_stime) );
-	rb_hash_aset( h, rb_str_new_cstr("value"), UINT2NUM(sig.si_value) );
+	//rb_hash_aset( h, rb_str_new_cstr("value"), UINT2NUM(sig.si_value) );
 	rb_hash_aset( h, rb_str_new_cstr("int"), UINT2NUM(sig.si_int) );
-	rb_hash_aset( h, rb_str_new_cstr("ptr"), ULONG2NUM(sig.si_ptr) );
+	//rb_hash_aset( h, rb_str_new_cstr("ptr"), ULONG2NUM(sig.si_ptr) );
 	rb_hash_aset( h, rb_str_new_cstr("overrun"), UINT2NUM(sig.si_overrun) );
 	rb_hash_aset( h, rb_str_new_cstr("timerid"), UINT2NUM(sig.si_timerid) );
-	rb_hash_aset( h, rb_str_new_cstr("addr"), ULONG2NUM(sig.si_addr) );
+	//rb_hash_aset( h, rb_str_new_cstr("addr"), ULONG2NUM(sig.si_addr) );
 	rb_hash_aset( h, rb_str_new_cstr("band"), UINT2NUM(sig.si_band) );
 	rb_hash_aset( h, rb_str_new_cstr("fd"), UINT2NUM(sig.si_fd) );
 #  elif defined(__APPLE__)
@@ -478,7 +463,7 @@ static VALUE ptrace_get_siginfo( VALUE cls, VALUE pid ) {
 }
 static VALUE ptrace_set_siginfo( VALUE cls, VALUE pid, VALUE hash ) {
 	VALUE rv = Qnil;
-#ifdef PTRACE_SET_SIGINFO
+#ifdef PT_SET_SIGINFO
 #  ifdef __linux
 	siginfo_t sig = {0};
 
@@ -500,7 +485,7 @@ static VALUE ptrace_set_siginfo( VALUE cls, VALUE pid, VALUE hash ) {
 	sig.si_band = NUM2UINT(hash_get_int( h, rb_str_new_cstr("band") ));
 	sig.si_fd = NUM2UINT(hash_get_int( h, rb_str_new_cstr("fd") ));
 
-	int_ptrace_raw( PTRACE_SETSIGINFO, pid, NULL, &sig);
+	int_ptrace_raw( PT_SETSIGINFO, pid, NULL, &sig);
 #  elif defined(__APPLE__)
 #  endif
 #endif
@@ -509,10 +494,10 @@ static VALUE ptrace_set_siginfo( VALUE cls, VALUE pid, VALUE hash ) {
 
 static VALUE ptrace_eventmsg( VALUE pid ) {
 	VALUE rv = Qnil;
-#ifdef PTRACE_GETEVENTMSG
+#ifdef PT_GETEVENTMSG
 	unsigned long long msg;
 
-	int_ptrace_raw( PTRACE_GETEVENTMSG, pid, NULL, &msg);
+	int_ptrace_raw( PT_GETEVENTMSG, pid, NULL, &msg);
 	rv = ULL2NUM(msg);
 #endif
 	return rv;
