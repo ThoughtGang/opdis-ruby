@@ -32,8 +32,16 @@ if __FILE__ == $0
       tgt.data.poke(regs[esp_name], v + 0x100)
 
       regs = tgt.regs.read
-      v = tgt.data.peek(regs[esp_name])
-      bytes = [v, v >> 8, v >> 12, v >> 16].map { |byte| byte & 0xFF }
+      v1 = tgt.data.peek(regs[esp_name])
+      bytes = [v1, v1 >> 8, v1 >> 12, v1 >> 16].map { |byte| byte & 0xFF }
+      puts "    BYTES AT EBP: #{bytes.map{ |byte| "%02X" % byte }.join(' ')}"
+
+      puts "    ...REVERTING ESP..."
+      tgt.data.poke(regs[esp_name], v)
+
+      regs = tgt.regs.read
+      v2 = tgt.data.peek(regs[esp_name])
+      bytes = [v2, v2 >> 8, v2 >> 12, v2 >> 16].map { |byte| byte & 0xFF }
       puts "    BYTES AT EBP: #{bytes.map{ |byte| "%02X" % byte }.join(' ')}"
     rescue Exception => e
       puts e.message
