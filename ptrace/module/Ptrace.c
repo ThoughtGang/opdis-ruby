@@ -492,7 +492,7 @@ static VALUE ptrace_set_siginfo( VALUE cls, VALUE pid, VALUE hash ) {
 	return rv;
 }
 
-static VALUE ptrace_eventmsg( VALUE pid ) {
+static VALUE ptrace_eventmsg( VALUE cls, VALUE pid ) {
 	VALUE rv = Qnil;
 #ifdef PT_GETEVENTMSG
 	unsigned long long msg;
