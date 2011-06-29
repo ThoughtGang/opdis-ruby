@@ -1,8 +1,8 @@
 #!/usr/bin/env ruby
 # Copyright 2011 Thoughtgang <http://www.thoughtgang.org>
-# Ruby additions to Ptrace module
+# Ruby additions to Ptrace extension
 
-require 'Ptrace_ext'            # Load C extension wrapping libbfd.so
+require 'Ptrace_ext'            # Load C extension wrapping ptrace(3)
 require 'forwardable'
 
 =begin rdoc
@@ -30,12 +30,16 @@ module Ptrace
   end
 
 =begin rdoc
+Requested command is not listed in PTRACE_COMMANDS and is considered 
+unsupported.
 =end
   class OperationNotSupportedError < Error
   end
 
   # -----------------------------------------------------------------------
 =begin rdoc
+Hash mapping ptrace symbols to command numbers. This is filled by the
+Debugger based on the #defines in sys/ptrace.h.
 =end
   PTRACE_COMMANDS = Debugger.commands
 
@@ -68,30 +72,44 @@ module Ptrace
 
   # -----------------------------------------------------------------------
 =begin rdoc
+A region of Memory in the target process.
+
+Usage:
+  mem = MemArea.new(MemArea::DATA, pid)
+  val = mem.peek(0x0804100)
+  mem.poke(0x0804100, 0x0)
 =end
   class MemArea
+
 =begin rdoc
+Target user area.
 =end
     MEM_USER = 1
 =begin rdoc
+Target text (code) area.
 =end
     MEM_TEXT = 2
 =begin rdoc
+Target data area.
 =end
     MEM_DATA = 3
 
 =begin rdoc
+Valid memory region types.
 =end
     TYPES = [MEM_USER, MEM_TEXT, MEM_DATA]
 
 =begin rdoc
+Type of memory region.
 =end
     attr_reader :mem_type
 =begin rdoc
+PID of process owning this memory region.
 =end
     attr_reader :pid
 
 =begin rdoc
+Create a new memory region of the specified type for process 'pid'.
 =end
     def initialize(type, pid)
       @mem_type = type
@@ -110,18 +128,24 @@ module Ptrace
     end
 
 =begin rdoc
+Read a word of data from address 'addr' in memory region.
+This can raise an OperationNotPermittedError if access is denied, or an
+InvalidProcessError if the target process has exited.
 =end
     def peek(addr)
       ptrace_send(:peek, @getter_sym, addr)
     end
 
 =begin rdoc
+Write a word of data to address 'addr' in memory region.
+This can raise an OperationNotPermittedError if access is denied, or an
+InvalidProcessError if the target process has exited.
 =end
     def poke(addr, value)
       ptrace_send(:poke, @setter_sym, addr, value)
     end
 
-    protected
+    private
 
     def ptrace_send( sym, cmd, addr, arg=nil )
       begin
@@ -174,29 +198,45 @@ module Ptrace
 
   # -----------------------------------------------------------------------
 =begin rdoc
+The CPU registers for the process. This acts as a Hash mapping register names
+to contents. The Hash acts as a snapshot of the CPU state; the registers are 
+read from the process using read(), and written to the process using write().
+
+Usage:
+  regs = RegSet.new(RegSet::GEN, pid)
+  regs.read
+  puts regs.inspect
+  regs['eax'] = 0x0
+  regs.write
 =end
   class RegSet 
     extend Forwardable
     extend Enumerable
 
 =begin rdoc
+General register set (EAX and friends in x86).
 =end
     GEN = 0
 =begin rdoc
+Floating-point register set (ST(0) and friends in x86).
 =end
     FP = 0
 =begin rdoc
+Valid register set types.
 =end
     TYPES = [GEN, FP]
 
 =begin rdoc
+Type of this register set.
 =end
     attr_reader :reg_type
 =begin rdoc
+PID of process owning this register set.
 =end
     attr_reader :pid
 
 =begin rdoc
+Create a new register set of the specified type for process 'pid'.
 =end
     def initialize(type, pid)
       @reg_type = type
@@ -207,13 +247,19 @@ module Ptrace
     end
 
 =begin rdoc
+Read the current state of the CPU registers from the process. This fills the
+contents of the RegSet Hash, and returns the Hash.
+This can raise an OperationNotPermittedError if access is denied, or an
+InvalidProcessError if the target process has exited.
 =end
     def read
-      # this returns a Hash
       @regs = ptrace_send(@getter)
     end
 
 =begin rdoc
+Write the contents of the RegSet Hash to the process CPU registers.
+This can raise an OperationNotPermittedError if access is denied, or an
+InvalidProcessError if the target process has exited.
 =end
     def write
       ptrace_send(@setter, @regs)
@@ -226,7 +272,7 @@ module Ptrace
                    :shift, :size, :sort, :store, :to_a, :to_s, :update,
                    :value?, :values
 
-    protected
+    private
 
     def ptrace_send( sym, arg=nil )
       begin
@@ -248,33 +294,64 @@ module Ptrace
 
   # -----------------------------------------------------------------------
 =begin rdoc
+A target process managed by ptrace.
+
+Usage:
+  tgt = Target.attach(pid)
+  loop do
+    begin
+      tgt.step
+      puts tgt.regs.read.inspect
+    rescue Ptrace::InvalidProcessError
+      break
+    end
+  end
+
+  tgt = Target.launch(cmd)
+  loop do
+    begin
+      state = tgt.syscall_state
+      puts state.inspect
+    rescue Ptrace::InvalidProcessError
+      break
+    end
+  end
 =end
   class Target
 
 =begin rdoc
+PID of target process.
 =end
     attr_accessor :pid
 =begin rdoc
+General (CPU) registers for process.
 =end
     attr_accessor :regs
 =begin rdoc
+FPU registers for process.
 =end
     attr_accessor :fpregs
 =begin rdoc
+Text (code) segment for process.
 =end
-    # Target.text.peek/poke, etc
     attr_accessor :text
 =begin rdoc
+Data segment for process.
 =end
     attr_accessor :data
 =begin rdoc
+Target 'user' (task) area.
 =end
     attr_accessor :user
 =begin rdoc
+Ptrace options.
 =end
     attr_accessor :options
 
 =begin rdoc
+Create a Ptrace::Target object for process 'pid'. The process is assumed to
+have been launched or attached to by ptrace, e.g. using Target.launch or 
+Target.attach.
 =end
     def initialize(pid)
       @pid = pid
@@ -284,12 +361,14 @@ module Ptrace
       @regs = RegSet.new(RegSet::GEN, pid)
       @fpregs = RegSet.new(RegSet::FP, pid)
       @options = Options.new(pid)
+      @valid = true
     end
 
 =begin rdoc
+PT_ATTACH : Attach to running process 'pid' and return a Ptrace::Target object.
+Raises an exception if the attach fails.
 =end
     def self.attach(pid)
-      # TODO: verify
       tgt = Target.new(pid)
       begin
         Ptrace::Debugger.send_cmd( Ptrace::Debugger.commands[:attach], pid, nil)
@@ -308,6 +387,10 @@ module Ptrace
     end
 
 =begin rdoc
+PT_TRACE_ME : Launch command 'cmd' and return a Ptrace::Target object for 
+controlling it.
+Raises an exception if the command cannot be launched; returns nil if
+the command cannot be traced.
 =end
     def self.launch(cmd)
       pid = fork
@@ -354,21 +437,27 @@ module Ptrace
     end
 
 =begin rdoc
+PT_KILL : Terminate the process.
+Note: This makes the Ptrace::Target object invalid.
 =end
-    # actions
     def kill
       ptrace_send( :kill )
       Process.waitpid(@pid)
+      @valid = false
     end
 
 =begin rdoc
+PT_DETACH : Detach from the process.
+Note: This makes the Ptrace::Target object invalid.
 =end
     def detach
       ptrace_send( :detach )
       Process.waitpid(@pid)
+      @valid = false
     end
 
 =begin rdoc
+PT_STEP : Step a single instruction.
 =end
     def step
       ptrace_send( :singlestep )
@@ -376,6 +465,13 @@ module Ptrace
     end
 
 =begin rdoc
+PT_SYSCALL : Execute until the start or end of the next system call.
+
+Usage:
+  tgt.syscall
+  in_regs = tgt.regs.read
+  tgt.syscall
+  out_regs = tgt.regs.read
 =end
     def syscall
       ptrace_send( :syscall )
@@ -404,6 +500,7 @@ on return from this syscall.
     end
 
 =begin rdoc
+PT_CONTINUE: Continue execution of target.
 =end
     def cont
       ptrace_send( :cont )
@@ -411,12 +508,14 @@ on return from this syscall.
     end
 
 =begin rdoc
+PT_SYSEMU
 =end
     def sysemu
       ptrace_send( :sysemu )
     end
 
 =begin rdoc
+PT_SYSEMU_SINGLESTEP
 =end
     def sysemu_step
       ptrace_send( :sysemu_singlestep )
@@ -430,11 +529,13 @@ on return from this syscall.
       # ptrace_send_data( :setoptions,  )
     end
 
-    protected
+    private
 
     def ptrace_send( cmd, arg=nil )
       begin
         raise OperationNotSupportedError if (not PTRACE_COMMANDS.include? cmd)
+        raise OperationNotPermittedError if (not @valid)
+
         Debugger.send_cmd( PTRACE_COMMANDS[cmd], @pid, arg )
       rescue RuntimeError => e
         case e.message
