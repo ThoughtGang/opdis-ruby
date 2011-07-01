@@ -220,11 +220,24 @@ General register set (EAX and friends in x86).
 =begin rdoc
 Floating-point register set (ST(0) and friends in x86).
 =end
-    FP = 0
+    FP = 1
+=begin rdoc
+Extended floating-point register set (fpx on Linux).
+=end
+    EXT = 2
 =begin rdoc
 Valid register set types.
 =end
-    TYPES = [GEN, FP]
+    TYPES = [GEN, FP, EXT]
+
+=begin rdoc
+Method names for read accessor, keyed by register type.
+=end
+    GETTER_SYMS = [:regs, :fpregs, :fpxregs ]
+=begin rdoc
+Method names for write accessor, keyed by register type.
+=end
+    SETTER_SYMS = [:regs=, :fpregs=, :fpxregs= ]
 
 =begin rdoc
 Type of this register set.
@@ -240,8 +253,8 @@ Create a new register set of the specified type for process 'pid'.
 =end
     def initialize(type, pid)
       @reg_type = type
-      @getter = (type == GEN) ? :regs : :fpregs
-      @setter = (type == GEN) ? :regs= : :fpregs=
+      @getter = GETTER_SYMS[type]
+      @setter = SETTER_SYMS[type]
       @pid = pid
       @regs = {}
     end
@@ -332,6 +345,10 @@ FPU registers for process.
 =end
     attr_accessor :fpregs
 =begin rdoc
+extended FPU registers for process.
+=end
+    attr_accessor :fpregs
+=begin rdoc
 Text (code) segment for process.
 =end
     attr_accessor :text
@@ -360,6 +377,7 @@ Target.attach.
       @user = MemArea.new(MemArea::MEM_USER, pid)
       @regs = RegSet.new(RegSet::GEN, pid)
       @fpregs = RegSet.new(RegSet::FP, pid)
+      @fpxregs = RegSet.new(RegSet::Ext, pid)
       @options = Options.new(pid)
       @valid = true
     end
