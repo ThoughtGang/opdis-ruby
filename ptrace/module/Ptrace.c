@@ -58,22 +58,6 @@ static VALUE hash_get_int( VALUE h, VALUE key ) {
 	return (v == Qnil) ? UINT2NUM(0) : v;
 }
 
-/* ---------------------------------------------------------------------- */
-//symFileno = rb_intern("fileno");
-// rb_raise(rb_eRuntimeError, "BFD error (%d): %s", err, bfd_errmsg(err) );
-// VALUE instance, var;
-// if ( rb_respond_to( tgt, symFileno ) ) {
-// } else if ( Qtrue == rb_obj_is_kind_of( tgt, rb_cString) ) {
-// char * path = StringValuePtr(tgt);
-// VALUE rb_path = rb_funcall(tgt, symPath, 0);
-// if ( Qnil == fd_val ) {
-// fd = NUM2INT(fd_val);
-//	rb_hash_aset( *hash, str_to_sym(AINFO_MEMBER_ARCH), 
-//		      rb_str_new_cstr(bfd_printable_arch_mach(info->arch,
-//							      info->mach)) );
-// var = rb_hash_new();
-/* ---------------------------------------------------------------------- */
-
 #define CMD_HASH_ADD(h, str, val) \
 	rb_hash_aset(h, str_to_sym(str), UINT2NUM(val));
 
@@ -108,11 +92,17 @@ static VALUE build_cmd_hash( VALUE cls ) {
 #ifdef PT_GETFPREGS
 	CMD_HASH_ADD(h, SZ_PTRACE_GETFPREGS, PT_GETFPREGS)
 #endif
+#ifdef PT_GETFPXREGS
+	CMD_HASH_ADD(h, SZ_PTRACE_GETFPXREGS, PT_GETFPXREGS)
+#endif
 #ifdef PT_SETREGS
 	CMD_HASH_ADD(h, SZ_PTRACE_SETREGS, PT_SETREGS)
 #endif
 #ifdef PT_SETFPREGS
 	CMD_HASH_ADD(h, SZ_PTRACE_SETFPREGS, PT_SETFPREGS)
+#endif
+#ifdef PT_SETFPXREGS
+	CMD_HASH_ADD(h, SZ_PTRACE_SETFPXREGS, PT_SETFPXREGS)
 #endif
 #ifdef PT_SETOPTIONS
 	CMD_HASH_ADD(h, SZ_PTRACE_SETOPTIONS, PT_SETOPTIONS)
@@ -266,7 +256,6 @@ static VALUE ptrace_get_regs( VALUE cls, VALUE pid ) {
 
 	rv = int_ptrace_raw( PT_GETREGS, pid, NULL, &regs);
 
-	// int_ptrace
 #  ifdef __x86_64__
 	rb_hash_aset( h, rb_str_new_cstr("r15"), ULONG2NUM(regs.r15) );
 	rb_hash_aset( h, rb_str_new_cstr("r14"), ULONG2NUM(regs.r14) );
@@ -296,7 +285,23 @@ static VALUE ptrace_get_regs( VALUE cls, VALUE pid ) {
 	rb_hash_aset( h, rb_str_new_cstr("fs"), ULONG2NUM(regs.fs) );
 	rb_hash_aset( h, rb_str_new_cstr("gs"), ULONG2NUM(regs.gs) );
 #  else
-	// TODO
+	rb_hash_aset( h, rb_str_new_cstr("ebx"), ULONG2NUM(regs.ebx) );
+	rb_hash_aset( h, rb_str_new_cstr("ecx"), ULONG2NUM(regs.ecx) );
+	rb_hash_aset( h, rb_str_new_cstr("edx"), ULONG2NUM(regs.edx) );
+	rb_hash_aset( h, rb_str_new_cstr("esi"), ULONG2NUM(regs.esi) );
+	rb_hash_aset( h, rb_str_new_cstr("edi"), ULONG2NUM(regs.edi) );
+	rb_hash_aset( h, rb_str_new_cstr("ebp"), ULONG2NUM(regs.ebp) );
+	rb_hash_aset( h, rb_str_new_cstr("eax"), ULONG2NUM(regs.eax) );
+	rb_hash_aset( h, rb_str_new_cstr("ds"), ULONG2NUM(regs.xds) );
+	rb_hash_aset( h, rb_str_new_cstr("es"), ULONG2NUM(regs.xes) );
+	rb_hash_aset( h, rb_str_new_cstr("fs"), ULONG2NUM(regs.xfs) );
+	rb_hash_aset( h, rb_str_new_cstr("gs"), ULONG2NUM(regs.xgs) );
+	rb_hash_aset( h, rb_str_new_cstr("orig_eax"), ULONG2NUM(regs.orig_eax));
+	rb_hash_aset( h, rb_str_new_cstr("eip"), ULONG2NUM(regs.eip) );
+	rb_hash_aset( h, rb_str_new_cstr("cs"), ULONG2NUM(regs.xcs) );
+	rb_hash_aset( h, rb_str_new_cstr("eflags"), ULONG2NUM(regs.eflags) );
+	rb_hash_aset( h, rb_str_new_cstr("esp"), ULONG2NUM(regs.esp) );
+	rb_hash_aset( h, rb_str_new_cstr("ss"), ULONG2NUM(regs.xss) );
 #  endif
 #endif
 	return h;
@@ -340,7 +345,25 @@ static VALUE ptrace_set_regs( VALUE cls, VALUE pid, VALUE h ) {
 	regs.fs = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("fs") ));
 	regs.gs = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("gs") ));
 #  else
-	// x86 hash to data
+	regs.ebx = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("ebx") ));
+	regs.ecx = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("ecx") ));
+	regs.edx = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("edx") ));
+	regs.esi = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("esi") ));
+	regs.edi = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("edi") ));
+	regs.ebp = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("ebp") ));
+	regs.eax = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("eax") ));
+	regs.xds = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("ds") ));
+	regs.xes = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("es") ));
+	regs.xfs = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("fs") ));
+	regs.xgs = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("gs") ));
+	/* Ptrace does not allow modification of these registers:
+	regs.orig_rax = NUM2ULONG(hash_get_int(h, rb_str_new_cstr("orig_rax")));
+	regs.xcs = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("cs") ));
+	regs.xss = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("ss") ));
+	*/
+	regs.eip = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("eip") ));
+	regs.eflags = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("eflags") ));
+	regs.esp = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("esp") ));
 #  endif
 	rv = int_ptrace_raw( PT_SETREGS, pid, NULL, &regs);
 #endif
@@ -381,6 +404,21 @@ static VALUE ptrace_get_fpregs( VALUE cls, VALUE pid ) {
 		//	      UINT2NUM(regs.xmm_space[i]) );
 	}
 #  else
+	rb_hash_aset( h, rb_str_new_cstr("cwd"), UINT2NUM(regs.cwd) );
+	rb_hash_aset( h, rb_str_new_cstr("swd"), UINT2NUM(regs.swd) );
+	rb_hash_aset( h, rb_str_new_cstr("twd"), UINT2NUM(regs.twd) );
+	rb_hash_aset( h, rb_str_new_cstr("fip"), UINT2NUM(regs.fip) );
+	rb_hash_aset( h, rb_str_new_cstr("fcs"), UINT2NUM(regs.fcs) );
+	rb_hash_aset( h, rb_str_new_cstr("foo"), UINT2NUM(regs.foo) );
+	rb_hash_aset( h, rb_str_new_cstr("fos"), UINT2NUM(regs.fos) );
+	for ( i = 0; i < 20; i++ ) {
+		// 20x long int st_space
+		char buf[8];
+		sprintf(buf, "ST(%d)", i);
+		// TODO: 8 x 16-byte regs
+		//rb_hash_aset( h, rb_str_new_cstr(buf), 
+		//	      UINT2NUM(regs.st_space[i]) );
+	}
 #  endif
 #elif defined(__APPLE__)
 #  ifdef __x86_64__
@@ -421,8 +459,110 @@ static VALUE ptrace_set_fpregs( VALUE cls, VALUE pid, VALUE h ) {
 		//				rb_str_new_cstr(buf) ));
 	}
 #  else
+	regs.cwd = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("cwd") ));
+	regs.swd = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("swd") ));
+	regs.twd = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("twd") ));
+	regs.fip = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("fip") ));
+	regs.fcs = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("fcs") ));
+	regs.foo = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("foo") ));
+	regs.fos = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("fos") ));
+	for ( i = 0; i < 20; i++ ) {
+		char buf[8];
+		sprintf(buf, "ST(%d)", i);
+		// TODO: 8 * 16-byte regs
+		//regs.st_space[i] = NUM2UINT(hash_get_int( h, 
+		//				rb_str_new_cstr(buf) ));
+	}
 #  endif
 	rv = int_ptrace_raw( PT_SETFPREGS, pid, NULL, &regs);
+#elif defined(__APPLE__)
+#  ifdef __x86_64__
+#  else
+#  endif
+#endif
+	return Qnil;
+}
+
+static VALUE ptrace_get_fpxregs( VALUE cls, VALUE pid ) {
+	VALUE h = rb_hash_new();
+#ifdef __linux
+	long rv = 0;
+	int i;
+
+#  ifdef __x86_64__
+	// Nothing to do: x86-64 has no fpxregs structure
+#  else
+	struct user_fpxregs_struct regs = {0};
+
+	rv = int_ptrace_raw( PT_GETFPREGS, pid, NULL, &regs);
+
+	rb_hash_aset( h, rb_str_new_cstr("cwd"), UINT2NUM(regs.cwd) );
+	rb_hash_aset( h, rb_str_new_cstr("swd"), UINT2NUM(regs.swd) );
+	rb_hash_aset( h, rb_str_new_cstr("twd"), UINT2NUM(regs.twd) );
+	rb_hash_aset( h, rb_str_new_cstr("fop"), UINT2NUM(regs.fop) );
+	rb_hash_aset( h, rb_str_new_cstr("fip"), ULONG2NUM(regs.fip) );
+	rb_hash_aset( h, rb_str_new_cstr("fcs"), UINT2NUM(regs.fcs) );
+	rb_hash_aset( h, rb_str_new_cstr("foo"), UINT2NUM(regs.foo) );
+	rb_hash_aset( h, rb_str_new_cstr("fos"), UINT2NUM(regs.fos) );
+	rb_hash_aset( h, rb_str_new_cstr("mxcsr"), UINT2NUM(regs.mxcsr) );
+	for ( i = 0; i < 32; i++ ) {
+		char buf[8];
+		sprintf(buf, "ST(%d)", i);
+		// TODO: 8 x 16-byte regs
+		//rb_hash_aset( h, rb_str_new_cstr(buf), 
+		//	      UINT2NUM(regs.st_space[i]) );
+	}
+	for ( i = 0; i < 32; i++ ) {
+		char buf[8];
+		sprintf(buf, "xmm%d", i);
+		// TODO: 16 x 16-byte regs
+		//rb_hash_aset( h, rb_str_new_cstr(buf), 
+		//	      UINT2NUM(regs.xmm_space[i]) );
+	}
+#  endif
+#elif defined(__APPLE__)
+#  ifdef __x86_64__
+#  else
+#  endif
+#endif
+	return h;
+}
+
+static VALUE ptrace_set_fpxregs( VALUE cls, VALUE pid, VALUE h ) {
+
+#ifdef __linux
+	long rv = 0;
+	int i;
+#  ifdef __x86_64__
+	// Nothing to do: x86-64 has no fpxregs structure
+#  else
+	struct user_fpxregs_struct regs = {0};
+
+	regs.cwd = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("cwd") ));
+	regs.swd = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("swd") ));
+	regs.twd = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("twd") ));
+	regs.fop = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("fop") ));
+	regs.fip = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("fip") ));
+	regs.fcs = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("fcs") ));
+	regs.foo = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("foo") ));
+	regs.fos = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("fos") ));
+	regs.mxcsr = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("mxcsr") ));
+	for ( i = 0; i < 32; i++ ) {
+		char buf[8];
+		sprintf(buf, "ST(%d)", i);
+		// TODO: 8 * 16-byte regs
+		//regs.st_space[i] = NUM2UINT(hash_get_int( h, 
+		//				rb_str_new_cstr(buf) ));
+	}
+	for ( i = 0; i < 32; i++ ) {
+		char buf[8];
+		sprintf(buf, "xmm%d", i);
+		// TODO : 16 x 16-byte regs
+		//regs.xmm_space[i] = NUM2UINT(hash_get_int( h, 
+		//				rb_str_new_cstr(buf) ));
+	}
+	rv = int_ptrace_raw( PT_SETFPXREGS, pid, NULL, &regs);
+#  endif
 #elif defined(__APPLE__)
 #  ifdef __x86_64__
 #  else
@@ -520,6 +660,8 @@ static void init_debugger_class( VALUE modPtrace ) {
 	rb_define_singleton_method(clsDebug, "regs=", ptrace_set_regs, 2);
 	rb_define_singleton_method(clsDebug, "fpregs", ptrace_get_fpregs, 1);
 	rb_define_singleton_method(clsDebug, "fpregs=", ptrace_set_fpregs, 2);
+	rb_define_singleton_method(clsDebug, "fpxregs", ptrace_get_fpxregs, 1);
+	rb_define_singleton_method(clsDebug, "fpxregs=", ptrace_set_fpxregs, 2);
 	rb_define_singleton_method(clsDebug, "signal", ptrace_get_siginfo, 1);
 	rb_define_singleton_method(clsDebug, "signal=", ptrace_set_siginfo, 2);
 	rb_define_singleton_method(clsDebug, "event_msg", ptrace_eventmsg, 1);
@@ -527,8 +669,9 @@ static void init_debugger_class( VALUE modPtrace ) {
 
 /* ---------------------------------------------------------------------- */
 /* USER */
+
 /* ---------------------------------------------------------------------- */
-/* BFD Module */
+/* Ptrace Module */
 
 void Init_Ptrace_ext() {
 	modPtrace = rb_define_module(PTRACE_MODULE_NAME);
