@@ -21,6 +21,9 @@ if __FILE__ == $0
       tgt.syscall
       puts "OUT: #{tgt.regs.read.inspect}"
 
+      # test syscall wrapper
+      state = tgt.syscall_state
+      puts state.inspect
     rescue Ptrace::InvalidProcessError
       cont = false
     end

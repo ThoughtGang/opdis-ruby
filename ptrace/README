@@ -3,6 +3,9 @@
 
 A Ruby C extension (and gem) for the POSIX ptrace facility.
 
+NOTE: This is currently alpha software, and is released only to publish the
+      API of the module. This should not be used in production software, as
+      many features are incomplete.
 
 BUILD
 -----
@@ -35,3 +38,68 @@ EXAMPLES
 
 Extended examples are provided in the 'examples' directory. The following
 code snippets give a brief overview of using the Ptrace extension.
+
+  # attach to process
+  pid = 10167	# just an example, use a real PID!
+  tgt = Ptrace::Target.attach(pid)
+  # terminate process
+  tgt.kill
+
+  # launch process 
+  cmd = './a.out'
+  tgt = Ptrace::Target.launch cmd
+  # detach
+  tgt.detach
+
+  # step first 10 instructions, printing general registers
+  tgt = Ptrace::Target.launch cmd
+  10.times do |i|
+    puts "DEBUGGER STEP #{i}"
+    # print registers
+    tgt.regs.read.each { |name, val| puts "%s: %016X" % name, val }
+    tgt.step
+  end
+  # continue process
+  tgt.cont
+
+  
+  # print register contents on syscall in/out
+  tgt = Ptrace::Target.launch cmd
+  cont = true
+  while cont
+    begin
+      tgt.syscall
+      puts "IN: #{tgt.regs.read.inspect}"
+      tgt.syscall
+      puts "OUT: #{tgt.regs.read.inspect}"
+    rescue Ptrace::InvalidProcessError
+      cont = false
+    end
+
+  end
+
+  # step first ten instructions, printing bytes at EIP and ESP
+  tgt = Ptrace::Target.launch cmd
+  10.times do |i|
+  sleep 1
+    begin
+      tgt.step
+
+      regs = tgt.regs.read
+      ip = (regs.include? 'rip') ? regs['rip'] : regs['eip']
+      puts ("DEBUGGER STEP %d: %X in %d" % [i, ip, tgt.pid])
+
+      v = tgt.text.peek(ip)
+      bytes = [v, v >> 8, v >> 12, v >> 16].map { |byte| byte & 0xFF }
+      puts "    BYTES AT EIP: #{bytes.map{ |byte| "%02X" % byte }.join(' ')}"
+
+      esp_name = (regs.include? 'rsp') ? 'rsp' : 'esp'
+      v = tgt.data.peek(regs[esp_name])
+      bytes = [v, v >> 8, v >> 12, v >> 16].map { |byte| byte & 0xFF }
+      puts "    BYTES AT ESP: #{bytes.map{ |byte| "%02X" % byte }.join(' ')}"
+
+      # Modify ESP, just because we can
+      puts "    ...WRITING ESP..."
+      tgt.data.poke(regs[esp_name], v + 0x100)
+  end
+  tgt.cont
