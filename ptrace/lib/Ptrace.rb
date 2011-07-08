@@ -43,6 +43,12 @@ Debugger based on the #defines in sys/ptrace.h.
 =end
   PTRACE_COMMANDS = Debugger.commands
 
+=begin rdoc
+Hash mapping syscall numbers to syscall names (stored as Symbols). This is 
+filled by the Debugger based on the #defined in sys/syscalls.h.
+=end
+  SYSCALL_MAP = Debugger.syscalls
+
   # -----------------------------------------------------------------------
 =begin rdoc
 =end
