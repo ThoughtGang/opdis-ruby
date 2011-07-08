@@ -1,6 +1,11 @@
+2011-07-08 :	mkfs <mkfs@thoughtgang.org>
+	*	Added Hash of syscall num-to-name
+	*	Version bump
+
 2011-07-07 :	mkfs <mkfs@thoughtgang.org>
 	*	Fixed PTRACE_SYSCALL
 	*	Added x86 regs, fpregs, and fpxregs
 	*	Version bump
+
 2011-06-29 :	mkfs <mkfs@thoughtgang.org>
 	*	Initial version
