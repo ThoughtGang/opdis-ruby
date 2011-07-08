@@ -34,6 +34,14 @@
 #define SZ_PTRACE_SYSEMU "sysemu"
 #define SZ_PTRACE_SYSEMU_SINGLESTEP  "sysemu_singlestep"
 
+#define SZ_PTRACE_O_TRACESYSGOOD "trace_sys_good"
+#define SZ_PTRACE_O_TRACEFORK "trace_fork"
+#define SZ_PTRACE_O_TRACEVFORK "trace_vfork"
+#define SZ_PTRACE_O_TRACEVFORKDONE "trace_vfork_done"
+#define SZ_PTRACE_O_TRACECLONE "trace_clone"
+#define SZ_PTRACE_O_TRACEEXEC "trace_exec"
+#define SZ_PTRACE_O_TRACEEXIT "trace_exit"
+
 /* module and class names */
 #define PTRACE_MODULE_NAME "Ptrace"
 #define PTRACE_ERROR_CLASS_NAME "PtraceError"
@@ -42,10 +50,3 @@
 void Init_Ptrace_ext();
 
 #endif
-#define SZ_PTRACE_O_TRACESYSGOOD "trace_sys_good"
-#define SZ_PTRACE_O_TRACEFORK "trace_fork"
-#define SZ_PTRACE_O_TRACEVFORK "trace_vfork"
-#define SZ_PTRACE_O_TRACEVFORKDONE "trace_vfork_done"
-#define SZ_PTRACE_O_TRACECLONE "trace_clone"
-#define SZ_PTRACE_O_TRACEEXEC "trace_exec"
-#define SZ_PTRACE_O_TRACEEXIT "trace_exit"
