@@ -1,2 +1,4 @@
+2013-03-03 :	mkfs <mkfs@thoughtgang.org>
+	*	Fixed compiler warnings
 2010-08-16 :	mkfs <mkfs@thoughtgang.org>
 	*	Added license to gemspec.

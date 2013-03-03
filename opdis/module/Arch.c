@@ -27,7 +27,7 @@ static const Opdis_disasm_def disasm_definitions[] = {
 			print_insn_alpha},
 	#endif
 	#ifdef ARCH_ARM
-		{"big_arm", bfd_arch_arm, bfd_mach_arm_umknown, 
+		{"big_arm", bfd_arch_arm, bfd_mach_arm_unknown, 
 			print_insn_big_arm},
 		{"little_arm", bfd_arch_arm, bfd_mach_arm_unknown,
 			print_insn_little_arm},

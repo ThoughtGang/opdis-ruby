@@ -498,7 +498,7 @@ static opdis_buf_t opdis_buf_for_target( VALUE tgt, VALUE hash ) {
 
 	/* Array object containing bytes */
 	} else if ( Qtrue == rb_obj_is_kind_of( tgt, rb_cArray ) ) {
-		int i;
+		unsigned int i;
 		unsigned char * sbuf;
 		buf_len = RARRAY_LEN(tgt);
 		sbuf = alloca(buf_len);

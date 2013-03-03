@@ -923,7 +923,7 @@ static void set_insn_status( VALUE instance, enum opdis_insn_decode_t val ) {
 }
 
 static void fill_ruby_insn( const opdis_insn_t * insn, VALUE dest ) {
-	int i;
+	unsigned int i;
 	char buf[128];
 	VALUE ops = rb_iv_get(dest, IVAR(INSN_ATTR_OPERANDS) );
 
