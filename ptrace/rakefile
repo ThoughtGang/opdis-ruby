@@ -1,9 +1,9 @@
 # Ruby rakefile for Ptrace module
-# Copyright 2011 Thoughtgang <http://www.thoughtgang.org>
+# Copyright 2013 Thoughtgang <http://www.thoughtgang.org>
 
-require 'rake/gempackagetask'
+require 'rdoc/task'
+require 'rubygems/package_task'
 require 'rake/packagetask'
-require 'rake/rdoctask'
 require 'rake/testtask'
 
 UNIT_TEST_FILES = FileList[
@@ -15,7 +15,7 @@ task :default => [:test]
 # ----------------------------------------------------------------------
 spec = Gem::Specification.new do |spec|
   spec.name = 'Ptrace'
-  spec.version = '0.9.2'
+  spec.version = '0.9.3'
   spec.summary = 'Ruby extension library providing an API to POSIX ptrace'
   spec.description = %{...}
 
@@ -34,13 +34,13 @@ spec = Gem::Specification.new do |spec|
   spec.extensions = Dir['module/extconf.rb']
   spec.test_files = UNIT_TEST_FILES
 end
-Rake::GemPackageTask.new(spec) do |pkg|
+Gem::PackageTask.new(spec) do |pkg|
   pkg.need_zip = false
   pkg.need_tar = true
 end
 
 # ----------------------------------------------------------------------
-Rake::RDocTask.new do |rd|
+RDoc::Task.new do |rd|
   rd.main = 'README.rdoc'
   rd.rdoc_dir = 'doc/html'
   rd.rdoc_files << 'README.rdoc'

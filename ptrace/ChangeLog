@@ -1,3 +1,5 @@
+2013-03-03 :	mkfs <mkfs@thoughtgang.org>
+	*	Updated rakefile to handle new tasks
 2011-07-08 :	mkfs <mkfs@thoughtgang.org>
 	*	Added Hash of syscall num-to-name
 	*	Version bump
