@@ -1,9 +1,9 @@
 # Ruby rakefile for Opdis module
-# Copyright 2010 Thoughtgang <http://www.thoughtgang.org>
+# Copyright 2013 Thoughtgang <http://www.thoughtgang.org>
 
-require 'rake/gempackagetask'
+require 'rubygems/package_task'
 require 'rake/packagetask'
-require 'rake/rdoctask'
+require 'rdoc/task'
 require 'rake/testtask'
 
 UNIT_TEST_FILES = FileList[
@@ -40,13 +40,13 @@ spec = Gem::Specification.new do |spec|
   spec.test_files = nil
   spec.test_files = UNIT_TEST_FILES
 end
-Rake::GemPackageTask.new(spec) do |pkg|
+Gem::PackageTask.new(spec) do |pkg|
   pkg.need_zip = false
   pkg.need_tar = true
 end
 
 # ----------------------------------------------------------------------
-Rake::RDocTask.new do |rd|
+RDoc::Task.new do |rd|
   rd.main = 'README.rdoc'
   rd.rdoc_dir = 'doc/html'
   rd.rdoc_files << 'README.rdoc'
