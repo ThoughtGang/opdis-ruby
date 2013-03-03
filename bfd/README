@@ -20,7 +20,7 @@ ruby-dev or ruby1.9-dev package.
 
 The gem is built using the standard gem build command:
 
-	bash# gem build Opcodes.gemspec
+	bash# gem build Bfd.gemspec
 
 
 The top-level Makefile supports each of these builds with the commands

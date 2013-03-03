@@ -1,3 +1,7 @@
+2013-03-03 :	mkfs <mkfs@thoughtgang.org>
+	*	Updated rakefile to support new task names
+2011-06-12 :	mkfs <mkfs@thoughtgang.org>
+	*	Fixed @tempfile-not-initialized warning
 2011-05-25 :	mkfs <mkfs@thoughtgang.org>
 	*	Fixed usage of Tempfile for buffer targets
 	*	Version bump
