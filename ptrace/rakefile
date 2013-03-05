@@ -15,7 +15,7 @@ task :default => [:test]
 # ----------------------------------------------------------------------
 spec = Gem::Specification.new do |spec|
   spec.name = 'Ptrace'
-  spec.version = '0.9.3'
+  spec.version = '0.9.4'
   spec.summary = 'Ruby extension library providing an API to POSIX ptrace'
   spec.description = %{...}
 

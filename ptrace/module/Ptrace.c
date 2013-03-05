@@ -1254,6 +1254,8 @@ static VALUE build_syscall_hash( VALUE cls ) {
 	return h;
 }
 
+#if 0
+//OBSOLETE
 /* This is a hash of user structure members to offsets */
 static VALUE build_user_hash( void ) {
 	VALUE h = rb_hash_new();
@@ -1312,6 +1314,7 @@ static VALUE build_option_hash( void ) {
 #endif
 	return h;
 }
+#endif
 
 /* ---------------------------------------------------------------------- */
 
@@ -1378,10 +1381,9 @@ static VALUE ptrace_get_regs( VALUE cls, VALUE pid ) {
 	VALUE h = rb_hash_new();
 
 #ifdef __linux
-	long rv = 0;
 	struct user_regs_struct regs = {0};
 
-	rv = int_ptrace_raw( PT_GETREGS, pid, NULL, &regs);
+	int_ptrace_raw( PT_GETREGS, pid, NULL, &regs);
 
 #  ifdef __x86_64__
 	rb_hash_aset( h, rb_str_new_cstr("r15"), ULONG2NUM(regs.r15) );
@@ -1437,7 +1439,6 @@ static VALUE ptrace_get_regs( VALUE cls, VALUE pid ) {
 static VALUE ptrace_set_regs( VALUE cls, VALUE pid, VALUE h ) {
 
 #ifdef __linux
-	long rv = 0;
 	struct user_regs_struct regs = {0};
 	int_ptrace_raw( PT_GETREGS, pid, NULL, &regs);
 
@@ -1492,7 +1493,7 @@ static VALUE ptrace_set_regs( VALUE cls, VALUE pid, VALUE h ) {
 	regs.eflags = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("eflags") ));
 	regs.esp = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("esp") ));
 #  endif
-	rv = int_ptrace_raw( PT_SETREGS, pid, NULL, &regs);
+	int_ptrace_raw( PT_SETREGS, pid, NULL, &regs);
 #endif
 	return Qnil;
 }
@@ -1500,11 +1501,10 @@ static VALUE ptrace_set_regs( VALUE cls, VALUE pid, VALUE h ) {
 static VALUE ptrace_get_fpregs( VALUE cls, VALUE pid ) {
 	VALUE h = rb_hash_new();
 #ifdef __linux
-	long rv = 0;
 	int i;
 	struct user_fpregs_struct regs = {0};
 
-	rv = int_ptrace_raw( PT_GETFPREGS, pid, NULL, &regs);
+	int_ptrace_raw( PT_GETFPREGS, pid, NULL, &regs);
 
 #  ifdef __x86_64__
 	rb_hash_aset( h, rb_str_new_cstr("cwd"), UINT2NUM(regs.cwd) );
@@ -1558,7 +1558,6 @@ static VALUE ptrace_get_fpregs( VALUE cls, VALUE pid ) {
 static VALUE ptrace_set_fpregs( VALUE cls, VALUE pid, VALUE h ) {
 
 #ifdef __linux
-	long rv = 0;
 	int i;
 	struct user_fpregs_struct regs = {0};
 #  ifdef __x86_64__
@@ -1601,7 +1600,7 @@ static VALUE ptrace_set_fpregs( VALUE cls, VALUE pid, VALUE h ) {
 		//				rb_str_new_cstr(buf) ));
 	}
 #  endif
-	rv = int_ptrace_raw( PT_SETFPREGS, pid, NULL, &regs);
+	int_ptrace_raw( PT_SETFPREGS, pid, NULL, &regs);
 #elif defined(__APPLE__)
 #  ifdef __x86_64__
 #  else
@@ -1613,15 +1612,14 @@ static VALUE ptrace_set_fpregs( VALUE cls, VALUE pid, VALUE h ) {
 static VALUE ptrace_get_fpxregs( VALUE cls, VALUE pid ) {
 	VALUE h = rb_hash_new();
 #ifdef __linux
-	long rv = 0;
-	int i;
 
 #  ifdef __x86_64__
 	// Nothing to do: x86-64 has no fpxregs structure
 #  else
+	int i;
 	struct user_fpxregs_struct regs = {0};
 
-	rv = int_ptrace_raw( PT_GETFPREGS, pid, NULL, &regs);
+	int_ptrace_raw( PT_GETFPREGS, pid, NULL, &regs);
 
 	rb_hash_aset( h, rb_str_new_cstr("cwd"), UINT2NUM(regs.cwd) );
 	rb_hash_aset( h, rb_str_new_cstr("swd"), UINT2NUM(regs.swd) );
@@ -1658,11 +1656,10 @@ static VALUE ptrace_get_fpxregs( VALUE cls, VALUE pid ) {
 static VALUE ptrace_set_fpxregs( VALUE cls, VALUE pid, VALUE h ) {
 
 #ifdef __linux
-	long rv = 0;
-	int i;
 #  ifdef __x86_64__
 	// Nothing to do: x86-64 has no fpxregs structure
 #  else
+	int i;
 	struct user_fpxregs_struct regs = {0};
 
 	regs.cwd = NUM2ULONG(hash_get_int( h, rb_str_new_cstr("cwd") ));
@@ -1688,7 +1685,7 @@ static VALUE ptrace_set_fpxregs( VALUE cls, VALUE pid, VALUE h ) {
 		//regs.xmm_space[i] = NUM2UINT(hash_get_int( h, 
 		//				rb_str_new_cstr(buf) ));
 	}
-	rv = int_ptrace_raw( PT_SETFPXREGS, pid, NULL, &regs);
+	int_ptrace_raw( PT_SETFPXREGS, pid, NULL, &regs);
 #  endif
 #elif defined(__APPLE__)
 #  ifdef __x86_64__
@@ -1704,14 +1701,14 @@ static VALUE ptrace_get_siginfo( VALUE cls, VALUE pid ) {
 #  ifdef __linux
 	siginfo_t sig = {0};
 
-	int rv = int_ptrace_raw( PT_GETSIGINFO, pid, NULL, &sig);
+	int_ptrace_raw( PT_GETSIGINFO, pid, NULL, &sig);
 
 	rb_hash_aset( h, rb_str_new_cstr("signo"), UINT2NUM(sig.si_signo) );
 	rb_hash_aset( h, rb_str_new_cstr("errno"), UINT2NUM(sig.si_errno) );
 	rb_hash_aset( h, rb_str_new_cstr("code"), UINT2NUM(sig.si_code) );
 	//rb_hash_aset( h, rb_str_new_cstr("trapno"), UINT2NUM(sig.si_trapno) );
 	rb_hash_aset( h, rb_str_new_cstr("pid"), pid_to_num(sig.si_pid) );
-	rb_hash_aset( h, rb_str_new_cstr("uid"), UIDTNUM(sig.si_uid) );
+	rb_hash_aset( h, rb_str_new_cstr("uid"), UIDT2NUM(sig.si_uid) );
 	rb_hash_aset( h, rb_str_new_cstr("status"), UINT2NUM(sig.si_status) );
 	rb_hash_aset( h, rb_str_new_cstr("utime"), UINT2NUM(sig.si_utime) );
 	rb_hash_aset( h, rb_str_new_cstr("stime"), UINT2NUM(sig.si_stime) );

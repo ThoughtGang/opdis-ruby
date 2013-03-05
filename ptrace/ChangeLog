@@ -1,3 +1,5 @@
+2013-03-04 :	mkfs <mkfs@thoughtgang.org>
+	*	Fixed build errors
 2013-03-03 :	mkfs <mkfs@thoughtgang.org>
 	*	Updated rakefile to handle new tasks
 2011-07-08 :	mkfs <mkfs@thoughtgang.org>
