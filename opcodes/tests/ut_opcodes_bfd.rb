@@ -543,7 +543,7 @@ class TC_OpcodesModuleBfd < Test::Unit::TestCase
   def test_buffer
 
     Bfd::Target.from_buffer( TARGET_BUF ) do |tgt|
-      dis = Opcodes::Disassembler.new( :bfd => tgt ) do |dis|
+      Opcodes::Disassembler.new( :bfd => tgt ) do |dis|
         ops = dis.disasm( tgt.sections['.text'] )
         assert_equal( 145, ops.length )
         assert_equal( 'xor', ops.first[:insn][0].strip )
