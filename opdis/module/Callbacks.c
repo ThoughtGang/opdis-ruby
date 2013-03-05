@@ -51,7 +51,7 @@ static VALUE insn_type_to_str( enum dis_insn_type t ) {
 static void fill_decoder_hash( VALUE hash, const opdis_insn_buf_t in, 
                                const opdis_byte_t * buf, opdis_off_t offset,
                                opdis_vma_t vma, opdis_off_t length ) {
-	int i;
+	unsigned int i;
 	VALUE str, ary;
 	char info = in->insn_info_valid;
 

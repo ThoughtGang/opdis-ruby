@@ -17,6 +17,8 @@ static int generic_print_address_wrapper(bfd_vma vma, disassemble_info *info ) {
 static const Opdis_disasm_def disasm_definitions[] = {
 /* Goddamn GNU. They make it near-impossible to get a list of supported
  * architectures at build OR run time. */
+// This broke AGAIN. Disabling all but i386.
+#if 0
 	#ifdef ARCH_ALPHA
 		{"alpha", bfd_arch_alpha, bfd_mach_alpha_ev4, print_insn_alpha},
 		{"alphaev4", bfd_arch_alpha, bfd_mach_alpha_ev4, 
@@ -103,6 +105,7 @@ static const Opdis_disasm_def disasm_definitions[] = {
 	#ifdef ARCH_I370
 		{"i370", bfd_arch_i370, 0, print_insn_i370},
 	#endif
+#endif
 	#ifdef ARCH_I386
 		{"8086", bfd_arch_i386, bfd_mach_i386_i8086, print_insn_i386},
 		{"x86", bfd_arch_i386, bfd_mach_i386_i386, print_insn_i386},
@@ -115,6 +118,7 @@ static const Opdis_disasm_def disasm_definitions[] = {
 		{"x86_64_intel", bfd_arch_i386, bfd_mach_x86_64_intel_syntax, 
 			         print_insn_i386},
 	#endif
+#if 0
 	#ifdef ARCH_i860
 		{"i860", bfd_arch_i860, 0, print_insn_i860},
 	#endif
@@ -316,6 +320,7 @@ static const Opdis_disasm_def disasm_definitions[] = {
 		{"z8001", bfd_arch_z8k, bfd_mach_z8001, print_insn_z8001},
 		{"z8002", bfd_arch_z8k, bfd_mach_z8002, print_insn_z8002},
 	#endif
+#endif
 		/* NULL entry to ensure table ends up ok */
 		{"INVALID", bfd_arch_unknown, 0, generic_print_address_wrapper}
 };
