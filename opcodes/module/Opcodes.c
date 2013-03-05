@@ -95,7 +95,6 @@ static void get_available_disassemblers( VALUE * ary ) {
 static const char * insn_type_to_str( enum dis_insn_type t ) {
 	const char *s;
 	switch (t) {
-		case dis_noninsn: s = "Invalid"; break;
 		case dis_nonbranch: s = "Not branch"; break;
 		case dis_branch: s = "Unconditional branch"; break;
 		case dis_condbranch: s = "Conditional branch"; break;
@@ -103,6 +102,8 @@ static const char * insn_type_to_str( enum dis_insn_type t ) {
 		case dis_condjsr: s = "Conditional jump to subroutine"; break;
 		case dis_dref: s = "Data reference"; break;
 		case dis_dref2: s = "Two data references"; break;
+		case dis_noninsn: 
+		default: s = "Invalid";
 	}
 	return s;
 }
@@ -219,7 +220,7 @@ static void config_libopcodes_for_target( struct disassemble_info * info,
 
 		if (! sym.value || (sym.value > sec->vma + sec->size ) ) {
 			rb_raise(rb_eRuntimeError, "Invalid symbol value 0x%X",
-				 ((unsigned long) sym.value));
+				 ((unsigned int) sym.value));
 		}
 			
 		vma_off = sym.value - sec->vma;
@@ -256,7 +257,7 @@ static void load_target( VALUE tgt, struct disasm_target * dest ) {
 
 	} else if ( Qtrue == rb_obj_is_kind_of( tgt, rb_cArray) ) {
 		/* array of bytes */
-		int i;
+		unsigned int i;
 		dest->buf_len = RARRAY_LEN(tgt);
 		dest->buf = calloc(dest->buf_len, 1);
 		for( i=0; i < dest->buf_len; i++ ) {
@@ -312,7 +313,6 @@ static void unload_target( struct disasm_target * tgt ) {
 static void disasm_init( struct disassemble_info * info, 
 			 struct disasm_target * target, bfd_vma * vma, 
 			 VALUE class, VALUE tgt, VALUE hash ) {
-	const char *opts;
 	bfd_vma vma_arg;
 	VALUE var;
 
