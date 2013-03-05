@@ -26,7 +26,6 @@ static const char * magic_for_io( magic_t magic, VALUE target ) {
 	/* File : pass file descr to magic */
 	/* NOTE: this closes the file descriptor! very bad! */
 	int fd = NUM2INT(rb_funcall(target, idFileNo, 0));
-	const char *m;
 
 	rb_thread_schedule();
 	return magic_descriptor( magic, fd );
@@ -40,7 +39,7 @@ static const char * magic_for_string( magic_t magic, VALUE target ) {
 
 static const char * magic_for_array( magic_t magic, VALUE target ) {
 	/* Array: generate string to pass to magic */
-	int i;
+	unsigned int i;
 	const char * result;
 	size_t buf_len = RARRAY_LEN(target);
 	unsigned char * buf = calloc(buf_len, 1);

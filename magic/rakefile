@@ -15,7 +15,7 @@ task :default => [:test]
 # ----------------------------------------------------------------------
 spec = Gem::Specification.new do |spec|
   spec.name = 'Magic'
-  spec.version = '1.1.1'
+  spec.version = '1.1.2'
   spec.summary = 'Ruby extension library providing an API to libmagic'
   spec.description = %{This extension provides access to the libmagic
   library, which is used (e.g. by the file(1) command) to identify the
