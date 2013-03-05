@@ -9,7 +9,7 @@ require 'Magic'
 class TC_MagicIdent < Test::Unit::TestCase
   def test_buffer
     buf = '<html><head></head><body></body></html>'
-    assert_equal( 'HTML document text', Magic.identify(buf) )
+    assert_equal( 'HTML document text', Magic.identify(buf).split("\n").first )
   end
 
   def test_unix_exec_file
